@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    _isLogin ? 'Welcome Back!' : 'Create Account',
+                    _isLogin ? 'Bon retour !' : 'Créer un compte',
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -95,10 +95,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
+                                return 'Veuillez saisir votre email';
                               }
                               if (!value.contains('@')) {
-                                return 'Please enter a valid email';
+                                return 'Veuillez saisir un email valide';
                               }
                               return null;
                             },
@@ -108,16 +108,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _passwordController,
                             obscureText: true,
                             decoration: const InputDecoration(
-                              labelText: 'Password',
+                              labelText: 'Mot de passe',
                               prefixIcon: Icon(Icons.lock),
                               border: OutlineInputBorder(),
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Please enter your password';
+                                return 'Veuillez saisir votre mot de passe';
                               }
                               if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
+                                return 'Le mot de passe doit contenir au moins 6 caractères';
                               }
                               return null;
                             },
@@ -157,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                             )
                                           : Text(
-                                              _isLogin ? 'Login' : 'Register',
+                                              _isLogin ? 'Se connecter' : 'S\'inscrire',
                                               style: const TextStyle(fontSize: 16),
                                             ),
                                     ),
@@ -175,8 +175,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                             child: Text(
                               _isLogin
-                                  ? "Don't have an account? Register"
-                                  : "Already have an account? Login",
+                                  ? "Vous n'avez pas de compte ? S'inscrire"
+                                  : "Vous avez déjà un compte ? Se connecter",
                               style: const TextStyle(color: Colors.blue),
                             ),
                           ),

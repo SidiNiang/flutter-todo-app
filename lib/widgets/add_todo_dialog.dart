@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../models/todo.dart';
 import '../providers/auth_provider.dart';
 import '../providers/todo_provider.dart';
@@ -28,6 +29,10 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       initialDate: _selectedDate,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('fr', 'FR'),
+      helpText: 'Sélectionner une date',
+      cancelText: 'Annuler',
+      confirmText: 'OK',
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -62,7 +67,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add New Task'),
+      title: const Text('Ajouter une nouvelle tâche'),
       content: Form(
         key: _formKey,
         child: Column(
@@ -71,13 +76,13 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
             TextFormField(
               controller: _todoController,
               decoration: const InputDecoration(
-                labelText: 'Task Description',
+                labelText: 'Description de la tâche',
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a task description';
+                  return 'Veuillez saisir une description';
                 }
                 return null;
               },
@@ -96,7 +101,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                     const Icon(Icons.calendar_today),
                     const SizedBox(width: 8),
                     Text(
-                      'Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                      'Date : ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
                     ),
                   ],
                 ),
@@ -108,7 +113,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Annuler'),
         ),
         Consumer<TodoProvider>(
           builder: (context, todoProvider, child) {
@@ -120,7 +125,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Add Task'),
+                  : const Text('Ajouter'),
             );
           },
         ),

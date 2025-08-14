@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Todo App'),
+        title: const Text('Mes Tâches'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
+            tooltip: 'Se déconnecter',
           ),
         ],
         bottom: PreferredSize(
@@ -100,9 +101,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             unselectedLabelColor: Colors.grey,
             indicatorColor: Colors.blue,
             tabs: const [
-              Tab(text: 'All Tasks'),
-              Tab(text: 'Pending'),
-              Tab(text: 'Completed'),
+              Tab(text: 'Toutes'),
+              Tab(text: 'En cours'),
+              Tab(text: 'Terminées'),
             ],
           ),
           Expanded(
@@ -120,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTodoDialog,
         backgroundColor: Colors.blue,
+        tooltip: 'Ajouter une tâche',
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -149,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome, ${authProvider.user?.email ?? 'User'}',
+                    'Bienvenue, ${authProvider.user?.email ?? 'Utilisateur'}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -159,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 4),
                   if (weatherProvider.temperature != null)
                     Text(
-                      'Temperature: ${weatherProvider.temperature!.toStringAsFixed(1)}°C',
+                      'Température : ${weatherProvider.temperature!.toStringAsFixed(1)}°C',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
@@ -167,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     )
                   else if (weatherProvider.isLoading)
                     const Text(
-                      'Loading weather...',
+                      'Chargement de la météo...',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
@@ -175,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     )
                   else
                     const Text(
-                      'Weather unavailable',
+                      'Météo indisponible',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
@@ -196,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return TextField(
           controller: _searchController,
           decoration: InputDecoration(
-            hintText: 'Search tasks...',
+            hintText: 'Rechercher des tâches...',
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
@@ -254,10 +256,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const SizedBox(height: 16),
                 Text(
                   filter == 'completed' 
-                      ? 'No completed tasks yet'
+                      ? 'Aucune tâche terminée'
                       : filter == 'pending'
-                          ? 'No pending tasks'
-                          : 'No tasks yet',
+                          ? 'Aucune tâche en cours'
+                          : 'Aucune tâche',
                   style: const TextStyle(
                     fontSize: 18,
                     color: Colors.grey,
@@ -266,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 if (filter != 'completed') ...[
                   const SizedBox(height: 8),
                   const Text(
-                    'Tap + to add your first task',
+                    'Appuyez sur + pour ajouter votre première tâche',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,

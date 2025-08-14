@@ -36,11 +36,11 @@ class ProfileProvider with ChangeNotifier {
 
       if (pickedFile != null) {
         _profileImagePath = pickedFile.path;
-        
+
         // Save to shared preferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('profile_image_path', _profileImagePath!);
-        
+
         notifyListeners();
       }
     } catch (e) {

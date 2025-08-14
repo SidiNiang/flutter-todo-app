@@ -29,8 +29,11 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      print('AuthProvider: Début de l\'inscription pour $email');
+      
       final user = await ApiService.register(email, password);
       if (user != null) {
+        print('AuthProvider: Inscription réussie');
         _user = user;
         await DatabaseService.instance.saveUser(user);
         await _saveLoginState(true);
@@ -38,13 +41,15 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _error = 'Registration failed';
+        print('AuthProvider: Échec de l\'inscription - aucun utilisateur retourné');
+        _error = 'Échec de l\'inscription. Veuillez réessayer.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      _error = 'Registration error: $e';
+      print('AuthProvider: Exception lors de l\'inscription: $e');
+      _error = 'Erreur d\'inscription: $e';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -57,8 +62,11 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      print('AuthProvider: Début de la connexion pour $email');
+      
       final user = await ApiService.login(email, password);
       if (user != null) {
+        print('AuthProvider: Connexion réussie');
         _user = user;
         await DatabaseService.instance.saveUser(user);
         await _saveLoginState(true);
@@ -66,13 +74,15 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _error = 'Invalid credentials';
+        print('AuthProvider: Échec de la connexion - aucun utilisateur retourné');
+        _error = 'Email ou mot de passe invalide';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      _error = 'Login error: $e';
+      print('AuthProvider: Exception lors de la connexion: $e');
+      _error = 'Erreur de connexion: $e';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -100,6 +110,11 @@ class AuthProvider with ChangeNotifier {
   void updateUser(User updatedUser) {
     _user = updatedUser;
     DatabaseService.instance.saveUser(updatedUser);
+    notifyListeners();
+  }
+
+  void clearError() {
+    _error = null;
     notifyListeners();
   }
 }

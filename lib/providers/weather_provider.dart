@@ -23,7 +23,7 @@ class WeatherProvider with ChangeNotifier {
       // Request location permission
       final permission = await Permission.location.request();
       if (permission != PermissionStatus.granted) {
-        _error = 'Location permission denied';
+        _error = 'Permission de localisation refusée';
         _isLoading = false;
         notifyListeners();
         return;
@@ -43,7 +43,7 @@ class WeatherProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = 'Error loading weather: $e';
+      _error = 'Erreur lors du chargement de la météo: $e';
       _isLoading = false;
       notifyListeners();
     }

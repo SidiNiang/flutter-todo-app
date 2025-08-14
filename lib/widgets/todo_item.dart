@@ -41,7 +41,7 @@ class TodoItem extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-              DateFormat('MMM dd, yyyy').format(todo.date),
+              DateFormat('dd MMM yyyy', 'fr_FR').format(todo.date),
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,
@@ -56,7 +56,7 @@ class TodoItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  'Not synced',
+                  'Non synchronisé',
                   style: TextStyle(
                     color: Colors.orange.shade700,
                     fontSize: 10,
@@ -83,7 +83,7 @@ class TodoItem extends StatelessWidget {
                 children: [
                   Icon(Icons.edit, size: 20),
                   SizedBox(width: 8),
-                  Text('Edit'),
+                  Text('Modifier'),
                 ],
               ),
             ),
@@ -93,7 +93,7 @@ class TodoItem extends StatelessWidget {
                 children: [
                   Icon(Icons.delete, size: 20, color: Colors.red),
                   SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
+                  Text('Supprimer', style: TextStyle(color: Colors.red)),
                 ],
               ),
             ),
@@ -114,12 +114,12 @@ class TodoItem extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text('Are you sure you want to delete this task?'),
+        title: const Text('Supprimer la tâche'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette tâche ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Annuler'),
           ),
           TextButton(
             onPressed: () {
@@ -128,7 +128,7 @@ class TodoItem extends StatelessWidget {
               Navigator.of(context).pop();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
