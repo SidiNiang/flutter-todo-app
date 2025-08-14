@@ -10,6 +10,15 @@ class TodoItem extends StatelessWidget {
 
   const TodoItem({super.key, required this.todo});
 
+  String _formatDate(DateTime date) {
+    try {
+      return DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
+    } catch (e) {
+      // Fallback to simple format if French locale fails
+      return DateFormat('dd/MM/yyyy').format(date);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -41,7 +50,7 @@ class TodoItem extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-              DateFormat('dd MMM yyyy', 'fr_FR').format(todo.date),
+              _formatDate(todo.date),
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,

@@ -29,10 +29,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       initialDate: _selectedDate,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      locale: const Locale('fr', 'FR'),
-      helpText: 'Sélectionner une date',
-      cancelText: 'Annuler',
-      confirmText: 'OK',
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -41,13 +37,24 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     }
   }
 
+  String _formatDate(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
+
   Future<void> _addTodo() async {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final todoProvider = Provider.of<TodoProvider>(context, listen: false);
 
-    if (authProvider.user == null) return;
+    if (authProvider.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur: Utilisateur non connecté')),
+      );
+      return;
+    }
+
+    print('Creating todo for user: ${authProvider.user!.id}'); // Debug
 
     final todo = Todo(
       accountId: authProvider.user!.id,
@@ -57,10 +64,22 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       synced: false,
     );
 
-    await todoProvider.addTodo(todo);
-    
-    if (mounted) {
-      Navigator.of(context).pop();
+    try {
+      await todoProvider.addTodo(todo);
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tâche ajoutée avec succès')),
+        );
+      }
+    } catch (e) {
+      print('Error adding todo: $e'); // Debug
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de l\'ajout: $e')),
+        );
+      }
     }
   }
 
@@ -100,9 +119,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                   children: [
                     const Icon(Icons.calendar_today),
                     const SizedBox(width: 8),
-                    Text(
-                      'Date : ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
-                    ),
+                    Text('Date : ${_formatDate(_selectedDate)}'),
                   ],
                 ),
               ),

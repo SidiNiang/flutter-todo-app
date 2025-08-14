@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'providers/auth_provider.dart';
 import 'providers/todo_provider.dart';
 import 'providers/weather_provider.dart';
@@ -12,6 +13,9 @@ void main() async {
   
   // Initialize local database
   await DatabaseService.instance.database;
+  
+  // Initialize date formatting for French locale
+  await initializeDateFormatting('fr_FR', null);
   
   runApp(const MyApp());
 }

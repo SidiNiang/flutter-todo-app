@@ -4,14 +4,14 @@ import '../models/user.dart';
 import '../models/todo.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.109/todo'; // Votre IP
+  static const String baseUrl = 'http://192.168.1.109/todo';
   
   static Future<User?> register(String email, String password) async {
     try {
-      print('Attempting to register: $email'); // Debug
+      print('Attempting to register: $email');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/register.php'), // Ajout de .php
+        Uri.parse('$baseUrl/register.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -19,13 +19,24 @@ class ApiService {
         }),
       );
 
-      print('Register response status: ${response.statusCode}'); // Debug
-      print('Register response body: ${response.body}'); // Debug
+      print('Register response status: ${response.statusCode}');
+      print('Register response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        if (response.body.trim().isEmpty) {
+          print('Empty response body');
+          return null;
+        }
+        
         final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          return User.fromJson(data['user']);
+        if (data['success'] == true && data['user'] != null) {
+          try {
+            return User.fromJson(data['user']);
+          } catch (parseError) {
+            print('Error parsing user data: $parseError');
+            print('User data received: ${data['user']}');
+            return null;
+          }
         } else {
           print('Register failed: ${data['message']}');
         }
@@ -39,10 +50,10 @@ class ApiService {
 
   static Future<User?> login(String email, String password) async {
     try {
-      print('Attempting to login: $email'); // Debug
+      print('Attempting to login: $email');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/login.php'), // Ajout de .php
+        Uri.parse('$baseUrl/login.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -50,16 +61,36 @@ class ApiService {
         }),
       );
 
-      print('Login response status: ${response.statusCode}'); // Debug
-      print('Login response body: ${response.body}'); // Debug
+      print('Login response status: ${response.statusCode}');
+      print('Login response body: "${response.body}"');
+      print('Login response body length: ${response.body.length}');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          return User.fromJson(data['user']);
-        } else {
-          print('Login failed: ${data['message']}');
+        if (response.body.trim().isEmpty) {
+          print('Empty response body from login API');
+          return null;
         }
+        
+        try {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true && data['user'] != null) {
+            try {
+              return User.fromJson(data['user']);
+            } catch (parseError) {
+              print('Error parsing user data: $parseError');
+              print('User data received: ${data['user']}');
+              return null;
+            }
+          } else {
+            print('Login failed: ${data['message']}');
+          }
+        } catch (jsonError) {
+          print('JSON decode error: $jsonError');
+          print('Raw response: "${response.body}"');
+          return null;
+        }
+      } else {
+        print('HTTP error: ${response.statusCode}');
       }
       return null;
     } catch (e) {
@@ -70,26 +101,31 @@ class ApiService {
 
   static Future<List<Todo>> getTodos(int accountId) async {
     try {
-      print('Getting todos for account: $accountId'); // Debug
+      print('Getting todos for account: $accountId');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/todos.php'), // Ajout de .php
+        Uri.parse('$baseUrl/todos.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': accountId,
         }),
       );
 
-      print('Get todos response: ${response.body}'); // Debug
+      print('Get todos response: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['success'] == true) {
+        if (data['success'] == true && data['todos'] != null) {
           List<Todo> todos = [];
-          for (var todoData in data['todos']) {
-            todos.add(Todo.fromJson(todoData));
+          try {
+            for (var todoData in data['todos']) {
+              todos.add(Todo.fromJson(todoData));
+            }
+            return todos;
+          } catch (parseError) {
+            print('Error parsing todos: $parseError');
+            return [];
           }
-          return todos;
         }
       }
       return [];
@@ -101,15 +137,15 @@ class ApiService {
 
   static Future<bool> createTodo(Todo todo) async {
     try {
-      print('Creating todo: ${todo.todo}'); // Debug
+      print('Creating todo: ${todo.todo}');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/inserttodo.php'), // Ajout de .php
+        Uri.parse('$baseUrl/inserttodo.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(todo.toApiJson()),
       );
 
-      print('Create todo response: ${response.body}'); // Debug
+      print('Create todo response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -124,10 +160,10 @@ class ApiService {
 
   static Future<bool> updateTodo(Todo todo) async {
     try {
-      print('Updating todo: ${todo.id}'); // Debug
+      print('Updating todo: ${todo.id}');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/updatetodo.php'), // Ajout de .php
+        Uri.parse('$baseUrl/updatetodo.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': todo.id,
@@ -137,7 +173,7 @@ class ApiService {
         }),
       );
 
-      print('Update todo response: ${response.body}'); // Debug
+      print('Update todo response: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -152,17 +188,17 @@ class ApiService {
 
   static Future<bool> deleteTodo(int todoId) async {
     try {
-      print('Deleting todo: $todoId'); // Debug
+      print('Deleting todo: $todoId');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/deletetodo.php'), // Ajout de .php
+        Uri.parse('$baseUrl/deletetodo.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': todoId,
         }),
       );
 
-      print('Delete todo response: ${response.body}'); // Debug
+      print('Delete todo response: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

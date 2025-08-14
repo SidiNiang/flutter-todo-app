@@ -37,16 +37,16 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
       initialDate: _selectedDate,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      locale: const Locale('fr', 'FR'),
-      helpText: 'Sélectionner une date',
-      cancelText: 'Annuler',
-      confirmText: 'OK',
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });
     }
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date);
   }
 
   Future<void> _updateTodo() async {
@@ -60,10 +60,21 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
       synced: false, // Mark as unsynced since it's been modified
     );
 
-    await todoProvider.updateTodo(updatedTodo);
-    
-    if (mounted) {
-      Navigator.of(context).pop();
+    try {
+      await todoProvider.updateTodo(updatedTodo);
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tâche modifiée avec succès')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la modification: $e')),
+        );
+      }
     }
   }
 
@@ -103,9 +114,7 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
                   children: [
                     const Icon(Icons.calendar_today),
                     const SizedBox(width: 8),
-                    Text(
-                      'Date : ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
-                    ),
+                    Text('Date : ${_formatDate(_selectedDate)}'),
                   ],
                 ),
               ),
