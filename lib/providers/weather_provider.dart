@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-// import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/weather_service.dart';
 
 class WeatherProvider with ChangeNotifier {
-  double? _temperature;
+  WeatherData? _weatherData;
   Position? _position;
   bool _isLoading = false;
   String? _error;
   String _weatherSource = '';
 
-  double? get temperature => _temperature;
+  WeatherData? get weatherData => _weatherData;
+  double? get temperature => _weatherData?.temperature;
+  String? get cityName => _weatherData?.cityName;
+  String? get country => _weatherData?.country;
   Position? get position => _position;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -27,9 +30,9 @@ class WeatherProvider with ChangeNotifier {
       
       // D'abord, tester l'API avec votre URL Postman qui fonctionne
       print('🧪 Testing API first...');
-      final testTemp = await WeatherService.testWeatherAPI();
-      if (testTemp != null) {
-        _temperature = testTemp;
+      final testWeatherData = await WeatherService.testWeatherAPI();
+      if (testWeatherData != null) {
+        _weatherData = testWeatherData;
         _weatherSource = 'Test API (ID: 2246678)';
         _isLoading = false;
         notifyListeners();
@@ -78,16 +81,16 @@ class WeatherProvider with ChangeNotifier {
         print('✅ Position obtained: ${_position!.latitude}, ${_position!.longitude}');
 
         // Obtenir les données météo
-        _temperature = await WeatherService.getTemperature(
+        _weatherData = await WeatherService.getWeatherData(
           _position!.latitude,
           _position!.longitude,
         );
 
-        if (_temperature != null) {
+        if (_weatherData != null) {
           _weatherSource = 'GPS (${_position!.latitude.toStringAsFixed(2)}, ${_position!.longitude.toStringAsFixed(2)})';
-          print('✅ Temperature obtained via GPS: ${_temperature}°C');
+          print('✅ Weather data obtained via GPS: ${_weatherData!.cityName}, ${_weatherData!.temperature}°C');
         } else {
-          print('⚠️ Failed to get temperature by GPS, trying fallback city');
+          print('⚠️ Failed to get weather data by GPS, trying fallback city');
           await _loadWeatherByCity();
         }
       } catch (e) {
@@ -110,11 +113,11 @@ class WeatherProvider with ChangeNotifier {
   Future<void> _loadWeatherByCity() async {
     try {
       print('🏙️ Loading weather by city (fallback)...');
-      _temperature = await WeatherService.getTemperatureByCity(city: 'Paris');
+      _weatherData = await WeatherService.getWeatherDataByCity(city: 'Paris');
       
-      if (_temperature != null) {
+      if (_weatherData != null) {
         _weatherSource = 'Paris (fallback)';
-        print('✅ Fallback temperature obtained: ${_temperature}°C');
+        print('✅ Fallback weather data obtained: ${_weatherData!.cityName}, ${_weatherData!.temperature}°C');
         _error = null; // Clear any previous error
       } else {
         _error = 'Impossible de récupérer la température';

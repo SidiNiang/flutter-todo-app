@@ -13,6 +13,9 @@ void main() async {
   
   // Initialize local database
   await DatabaseService.instance.database;
+
+  // DEBUG: Afficher le contenu de la base
+  await DatabaseService.instance.debugDatabase();
   
   // Initialize date formatting for French locale
   await initializeDateFormatting('fr_FR', null);
@@ -22,6 +25,7 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+  
 
   @override
   Widget build(BuildContext context) {
@@ -42,5 +46,7 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
       ),
     );
+
+    // Ajoutez temporairement dans votre main.dart pour nettoyer
   }
 }

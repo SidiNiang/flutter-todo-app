@@ -1,11 +1,23 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+class WeatherData {
+  final double temperature;
+  final String cityName;
+  final String country;
+
+  WeatherData({
+    required this.temperature,
+    required this.cityName,
+    required this.country,
+  });
+}
+
 class WeatherService {
   static const String apiKey = '638d81e58870c0d141c62ba76459c338';
   static const String baseUrl = 'https://api.openweathermap.org/data/2.5/weather';
 
-  static Future<double?> getTemperature(double latitude, double longitude) async {
+  static Future<WeatherData?> getWeatherData(double latitude, double longitude) async {
     try {
       print('🌡️ Requesting weather for: $latitude, $longitude');
       
@@ -25,9 +37,13 @@ class WeatherService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final temperature = data['main']['temp'].toDouble();
-        print('🌡️ Temperature obtained: ${temperature}°C');
-        return temperature;
+        final weatherData = WeatherData(
+          temperature: data['main']['temp'].toDouble(),
+          cityName: data['name'],
+          country: data['sys']['country'],
+        );
+        print('🌡️ Weather data obtained: ${weatherData.cityName}, ${weatherData.temperature}°C');
+        return weatherData;
       } else {
         print('❌ API Error: ${response.statusCode} - ${response.body}');
         return null;
@@ -38,8 +54,7 @@ class WeatherService {
     }
   }
 
-  // Méthode de fallback avec une ville par défaut (Paris)
-  static Future<double?> getTemperatureByCity({String city = 'Paris'}) async {
+  static Future<WeatherData?> getWeatherDataByCity({String city = 'Paris'}) async {
     try {
       print('🏙️ Requesting weather for city: $city');
       
@@ -59,10 +74,13 @@ class WeatherService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final temperature = data['main']['temp'].toDouble();
-        final cityName = data['name'];
-        print('🌡️ Temperature obtained for $cityName: ${temperature}°C');
-        return temperature;
+        final weatherData = WeatherData(
+          temperature: data['main']['temp'].toDouble(),
+          cityName: data['name'],
+          country: data['sys']['country'],
+        );
+        print('🌡️ Weather data obtained for ${weatherData.cityName}: ${weatherData.temperature}°C');
+        return weatherData;
       } else {
         print('❌ API Error: ${response.statusCode} - ${response.body}');
         return null;
@@ -73,8 +91,7 @@ class WeatherService {
     }
   }
 
-  // Test direct de l'API avec votre URL Postman
-  static Future<double?> testWeatherAPI() async {
+  static Future<WeatherData?> testWeatherAPI() async {
     try {
       print('🧪 Testing weather API with your Postman URL...');
       
@@ -94,10 +111,13 @@ class WeatherService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final temperature = data['main']['temp'].toDouble();
-        final cityName = data['name'];
-        print('🌡️ Test temperature obtained for $cityName: ${temperature}°C');
-        return temperature;
+        final weatherData = WeatherData(
+          temperature: data['main']['temp'].toDouble(),
+          cityName: data['name'],
+          country: data['sys']['country'],
+        );
+        print('🌡️ Test weather data obtained: ${weatherData.cityName}, ${weatherData.temperature}°C');
+        return weatherData;
       } else {
         print('❌ Test API Error: ${response.statusCode} - ${response.body}');
         return null;

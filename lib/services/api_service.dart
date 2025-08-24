@@ -4,11 +4,46 @@ import '../models/user.dart';
 import '../models/todo.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.109/todo';
+  // MODIFIEZ cette ligne avec votre adresse IP actuelle
+  static const String baseUrl = 'http://192.168.1.8/todo';
+  // Exemples possibles :
+  // static const String baseUrl = 'http://192.168.1.108/todo';
+  // static const String baseUrl = 'http://192.168.0.105/todo';
+  // static const String baseUrl = 'http://10.0.2.2/todo'; // Pour émulateur Android
+  
+  // AJOUTÉ : Méthode pour tester la connectivité
+  static Future<bool> testConnection() async {
+    try {
+      print('🔍 Testing connection to: $baseUrl');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/test_connection.php'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
+
+      print('📡 Connection test response: ${response.statusCode}');
+      print('📄 Connection test body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        try {
+          final data = jsonDecode(response.body);
+          return data['success'] == true;
+        } catch (e) {
+          // Si ce n'est pas du JSON, mais que le statut est 200, considérer comme OK
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('❌ Connection test error: $e');
+      return false;
+    }
+  }
   
   static Future<User?> register(String email, String password) async {
     try {
       print('Attempting to register: $email');
+      print('Using base URL: $baseUrl');
       
       final response = await http.post(
         Uri.parse('$baseUrl/register.php'),
@@ -17,7 +52,7 @@ class ApiService {
           'email': email,
           'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 10)); // AJOUTÉ timeout
 
       print('Register response status: ${response.statusCode}');
       print('Register response body: ${response.body}');
@@ -51,6 +86,7 @@ class ApiService {
   static Future<User?> login(String email, String password) async {
     try {
       print('Attempting to login: $email');
+      print('Using base URL: $baseUrl');
       
       final response = await http.post(
         Uri.parse('$baseUrl/login.php'),
@@ -59,7 +95,7 @@ class ApiService {
           'email': email,
           'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 10)); // AJOUTÉ timeout
 
       print('Login response status: ${response.statusCode}');
       print('Login response body: "${response.body}"');
@@ -102,6 +138,7 @@ class ApiService {
   static Future<List<Todo>> getTodos(int accountId) async {
     try {
       print('Getting todos for account: $accountId');
+      print('Using base URL: $baseUrl');
       
       final response = await http.post(
         Uri.parse('$baseUrl/todos.php'),
@@ -109,7 +146,7 @@ class ApiService {
         body: jsonEncode({
           'id': accountId,
         }),
-      );
+      ).timeout(const Duration(seconds: 10)); // AJOUTÉ timeout
 
       print('Get todos response: ${response.body}');
 
@@ -138,12 +175,13 @@ class ApiService {
   static Future<bool> createTodo(Todo todo) async {
     try {
       print('Creating todo: ${todo.todo}');
+      print('Using base URL: $baseUrl');
       
       final response = await http.post(
         Uri.parse('$baseUrl/inserttodo.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(todo.toApiJson()),
-      );
+      ).timeout(const Duration(seconds: 10)); // AJOUTÉ timeout
 
       print('Create todo response: ${response.body}');
 
@@ -161,6 +199,7 @@ class ApiService {
   static Future<bool> updateTodo(Todo todo) async {
     try {
       print('Updating todo: ${todo.id}');
+      print('Using base URL: $baseUrl');
       
       final response = await http.post(
         Uri.parse('$baseUrl/updatetodo.php'),
@@ -171,7 +210,7 @@ class ApiService {
           'todo': todo.todo,
           'done': todo.done,
         }),
-      );
+      ).timeout(const Duration(seconds: 10)); // AJOUTÉ timeout
 
       print('Update todo response: ${response.body}');
 
@@ -189,6 +228,7 @@ class ApiService {
   static Future<bool> deleteTodo(int todoId) async {
     try {
       print('Deleting todo: $todoId');
+      print('Using base URL: $baseUrl');
       
       final response = await http.post(
         Uri.parse('$baseUrl/deletetodo.php'),
@@ -196,7 +236,7 @@ class ApiService {
         body: jsonEncode({
           'id': todoId,
         }),
-      );
+      ).timeout(const Duration(seconds: 10)); // AJOUTÉ timeout
 
       print('Delete todo response: ${response.body}');
 

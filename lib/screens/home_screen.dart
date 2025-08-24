@@ -38,9 +38,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final todoProvider = Provider.of<TodoProvider>(context, listen: false);
-    final weatherProvider = Provider.of<WeatherProvider>(context, listen: false);
+    final weatherProvider =
+        Provider.of<WeatherProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
 
     if (authProvider.user != null) {
+      // AJOUTÉ : Charger la photo de profil pour cet utilisateur spécifique
+      await profileProvider.loadProfileImageForUser(authProvider.user!.id);
+
       await todoProvider.loadTodos(authProvider.user!.id);
       await weatherProvider.loadWeatherData();
     }
@@ -48,8 +54,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _logout() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+
+    // MODIFIÉ : Nettoyer seulement les données temporaires, pas les photos
+    await profileProvider.clearTemporaryData();
     await authProvider.logout();
-    
+
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -67,45 +78,108 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes Tâches'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Se déconnecter',
+      body: Column(
+        children: [
+          // AppBar personnalisée avec plus d'espace
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.blue, Color(0xFF1976D2)],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header avec titre et bouton déconnexion
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Mes Tâches',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(1, 1),
+                                blurRadius: 3,
+                                color: Colors.black26,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.logout,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                            onPressed: _logout,
+                            tooltip: 'Se déconnecter',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Informations utilisateur et météo
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildUserInfo(),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Barre de recherche
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildSearchBar(),
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
           ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(120),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildUserInfo(),
-                const SizedBox(height: 16),
-                _buildSearchBar(),
+
+          // Onglets de navigation
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.blue,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blue,
+              indicatorWeight: 3,
+              tabs: const [
+                Tab(
+                  text: 'Toutes',
+                  icon: Icon(Icons.list, size: 20),
+                ),
+                Tab(
+                  text: 'En cours',
+                  icon: Icon(Icons.pending_actions, size: 20),
+                ),
+                Tab(
+                  text: 'Terminées',
+                  icon: Icon(Icons.check_circle, size: 20),
+                ),
               ],
             ),
           ),
-        ),
-      ),
-      body: Column(
-        children: [
-          TabBar(
-            controller: _tabController,
-            labelColor: Colors.blue,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.blue,
-            tabs: const [
-              Tab(text: 'Toutes'),
-              Tab(text: 'En cours'),
-              Tab(text: 'Terminées'),
-            ],
-          ),
+
+          // Contenu des onglets
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -122,71 +196,208 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         onPressed: _showAddTodoDialog,
         backgroundColor: Colors.blue,
         tooltip: 'Ajouter une tâche',
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
     );
   }
 
   Widget _buildUserInfo() {
     return Consumer3<AuthProvider, WeatherProvider, ProfileProvider>(
-      builder: (context, authProvider, weatherProvider, profileProvider, child) {
-        return Row(
-          children: [
-            GestureDetector(
-              onTap: () => profileProvider.pickProfileImage(),
-              child: CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.white,
-                backgroundImage: profileProvider.profileImagePath != null
-                    ? FileImage(File(profileProvider.profileImagePath!))
-                    : null,
-                child: profileProvider.profileImagePath == null
-                    ? const Icon(Icons.person, size: 30, color: Colors.blue)
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Bienvenue, ${authProvider.user?.email ?? 'Utilisateur'}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+      builder:
+          (context, authProvider, weatherProvider, profileProvider, child) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () => profileProvider.pickProfileImage(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  if (weatherProvider.temperature != null)
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.white,
+                        backgroundImage: profileProvider.profileImagePath !=
+                                null
+                            ? FileImage(File(profileProvider.profileImagePath!))
+                            : null,
+                        child: profileProvider.profileImagePath == null
+                            ? const Icon(Icons.person,
+                                size: 32, color: Colors.blue)
+                            : null,
+                      ),
+                      // Indicateur visuel pour montrer que c'est cliquable
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      'Température : ${weatherProvider.temperature!.toStringAsFixed(1)}°C',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    )
-                  else if (weatherProvider.isLoading)
-                    const Text(
-                      'Chargement de la météo...',
+                      'Bienvenue,',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white.withOpacity(0.9),
                         fontSize: 14,
-                      ),
-                    )
-                  else
-                    const Text(
-                      'Météo indisponible',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
-                ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            authProvider.user?.email.split('@')[0] ??
+                                'Utilisateur',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 2,
+                                  color: Colors.black26,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Afficher l'ID utilisateur pour debug
+                        if (authProvider.user != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          color: Colors.white.withOpacity(0.8),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: weatherProvider.weatherData != null
+                              ? Text(
+                                  '${weatherProvider.weatherData!.cityName}, ${weatherProvider.weatherData!.temperature.toStringAsFixed(1)}°C',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(1, 1),
+                                        blurRadius: 2,
+                                        color: Colors.black26,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : weatherProvider.isLoading
+                                  ? Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 12,
+                                          height: 12,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<
+                                                    Color>(
+                                                Colors.white.withOpacity(0.8)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Chargement...',
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.8),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Text(
+                                      'Météo indisponible',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            onPressed: weatherProvider.isLoading
+                                ? null
+                                : () => weatherProvider.refreshWeather(),
+                            icon: Icon(
+                              weatherProvider.isLoading
+                                  ? Icons.hourglass_empty
+                                  : Icons.refresh,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            tooltip: 'Actualiser la météo',
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -195,30 +406,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildSearchBar() {
     return Consumer<TodoProvider>(
       builder: (context, todoProvider, child) {
-        return TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: 'Rechercher des tâches...',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      todoProvider.searchTodos('');
-                    },
-                  )
-                : null,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(25),
-              borderSide: BorderSide.none,
-            ),
+        return Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          onChanged: (value) {
-            todoProvider.searchTodos(value);
-          },
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(fontSize: 16),
+            decoration: InputDecoration(
+              hintText: 'Rechercher des tâches...',
+              hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16),
+              prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 24),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, color: Colors.grey[600]),
+                      onPressed: () {
+                        _searchController.clear();
+                        todoProvider.searchTodos('');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            ),
+            onChanged: (value) {
+              todoProvider.searchTodos(value);
+            },
+          ),
         );
       },
     );
@@ -228,7 +454,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Consumer<TodoProvider>(
       builder: (context, todoProvider, child) {
         if (todoProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Chargement des tâches...',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         List<Todo> todos;
@@ -249,30 +492,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  filter == 'completed' ? Icons.check_circle_outline : Icons.task_alt,
-                  size: 64,
-                  color: Colors.grey,
+                  filter == 'completed'
+                      ? Icons.check_circle_outline
+                      : filter == 'pending'
+                          ? Icons.pending_actions
+                          : Icons.task_alt,
+                  size: 80,
+                  color: Colors.grey[400],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 Text(
-                  filter == 'completed' 
+                  filter == 'completed'
                       ? 'Aucune tâche terminée'
                       : filter == 'pending'
                           ? 'Aucune tâche en cours'
                           : 'Aucune tâche',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
                     color: Colors.grey,
                   ),
                 ),
                 if (filter != 'completed') ...[
-                  const SizedBox(height: 8),
-                  const Text(
+                  const SizedBox(height: 12),
+                  Text(
                     'Appuyez sur + pour ajouter votre première tâche',
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
+                      fontSize: 16,
+                      color: Colors.grey[600],
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ],
@@ -282,6 +531,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         return RefreshIndicator(
           onRefresh: _loadData,
+          color: Colors.blue,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: todos.length,
