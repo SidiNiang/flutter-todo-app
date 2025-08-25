@@ -25,20 +25,35 @@ class TodoProvider with ChangeNotifier {
     try {
       print('Loading todos for account: $accountId');
       
-      // Load from local database first
+      // Check internet connectivity first
+      final connectivityResult = await Connectivity().checkConnectivity();
+      bool isOnline = connectivityResult != ConnectivityResult.none;
+      
+      if (isOnline) {
+        // Test server connectivity
+        final serverReachable = await ApiService.testConnection();
+        if (serverReachable) {
+          print('Online: Loading from server first');
+          // If online, get fresh data from server
+          final serverTodos = await ApiService.getTodos(accountId);
+          print('Received ${serverTodos.length} todos from server');
+          
+          // CORRIGÉ : Synchronisation intelligente sans doublons
+          for (var serverTodo in serverTodos) {
+            await _mergeTodoFromServer(serverTodo);
+          }
+        } else {
+          print('Server not reachable, using local data');
+        }
+      } else {
+        print('Offline: Loading from local database only');
+      }
+      
+      // Load from local database
       _todos = await DatabaseService.instance.getTodos(accountId);
       print('Loaded ${_todos.length} todos from local database');
+      
       _applyFilter();
-
-      // Try to sync with server if connected
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult != ConnectivityResult.none) {
-        print('Internet available, syncing with server...');
-        await _syncWithServer(accountId);
-      } else {
-        print('No internet connection, using local data only');
-      }
-
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -46,40 +61,6 @@ class TodoProvider with ChangeNotifier {
       print('Error in loadTodos: $e');
       _isLoading = false;
       notifyListeners();
-    }
-  }
-
-  Future<void> _syncWithServer(int accountId) async {
-    try {
-      // Get todos from server
-      final serverTodos = await ApiService.getTodos(accountId);
-      print('Received ${serverTodos.length} todos from server');
-      
-      // Clear local database and insert server data to avoid duplicates
-      await DatabaseService.instance.clearTodos();
-      
-      // Insert server todos as synced
-      for (var serverTodo in serverTodos) {
-        await DatabaseService.instance.insertTodo(serverTodo.copyWith(synced: true));
-      }
-
-      // Sync unsynced local todos to server (this shouldn't happen after clearing, but just in case)
-      final unsyncedTodos = await DatabaseService.instance.getUnsyncedTodos(accountId);
-      print('Found ${unsyncedTodos.length} unsynced todos');
-      
-      for (var todo in unsyncedTodos) {
-        final success = await ApiService.createTodo(todo);
-        if (success) {
-          await DatabaseService.instance.markTodoAsSynced(todo.id!, todo.id!);
-        }
-      }
-
-      // Reload from local database
-      _todos = await DatabaseService.instance.getTodos(accountId);
-      print('After sync: ${_todos.length} todos in local database');
-      _applyFilter();
-    } catch (e) {
-      print('Sync error: $e');
     }
   }
 
@@ -92,25 +73,38 @@ class TodoProvider with ChangeNotifier {
       bool isOnline = connectivityResult != ConnectivityResult.none;
       
       if (isOnline) {
-        // If online, create on server first
-        print('Online mode: creating todo on server');
-        final success = await ApiService.createTodo(todo);
-        if (success) {
-          print('Todo created successfully on server');
-          // Reload todos from server to get the server ID
-          await loadTodos(todo.accountId);
+        // Test server connectivity
+        final serverReachable = await ApiService.testConnection();
+        if (serverReachable) {
+          print('Online mode: creating todo on server');
+          final success = await ApiService.createTodo(todo);
+          if (success) {
+            print('Todo created successfully on server');
+            // Reload todos from server to get the updated list
+            await loadTodos(todo.accountId);
+            return;
+          } else {
+            print('Server creation failed, saving locally');
+          }
         } else {
-          // If server creation fails, save locally as unsynced
-          print('Server creation failed, saving locally');
-          await DatabaseService.instance.insertTodo(todo.copyWith(synced: false));
-          await loadTodos(todo.accountId);
+          print('Server not reachable, saving locally');
         }
       } else {
-        // If offline, save locally as unsynced
         print('Offline mode: saving locally');
-        await DatabaseService.instance.insertTodo(todo.copyWith(synced: false));
-        await loadTodos(todo.accountId);
       }
+      
+      // Save locally as unsynced (fallback or offline mode)
+      print('💾 Saving todo locally as unsynced');
+      final localTodo = todo.copyWith(synced: false);
+      await DatabaseService.instance.insertTodo(localTodo);
+      
+      // Reload local todos
+      _todos = await DatabaseService.instance.getTodos(todo.accountId);
+      _applyFilter();
+      notifyListeners();
+      
+      print('✅ Todo saved locally: ${todo.todo}');
+      
     } catch (e) {
       _error = 'Error adding todo: $e';
       print('Error in addTodo: $e');
@@ -128,15 +122,20 @@ class TodoProvider with ChangeNotifier {
       // Try to sync with server
       final connectivityResult = await Connectivity().checkConnectivity();
       if (connectivityResult != ConnectivityResult.none) {
-        final success = await ApiService.updateTodo(todo);
-        if (success) {
-          // Mark as synced if server update successful
-          await DatabaseService.instance.updateTodo(todo.copyWith(synced: true));
+        final serverReachable = await ApiService.testConnection();
+        if (serverReachable) {
+          final success = await ApiService.updateTodo(todo);
+          if (success) {
+            // Mark as synced if server update successful
+            await DatabaseService.instance.updateTodo(todo.copyWith(synced: true));
+          }
         }
       }
 
       // Reload todos
-      await loadTodos(todo.accountId);
+      _todos = await DatabaseService.instance.getTodos(todo.accountId);
+      _applyFilter();
+      notifyListeners();
     } catch (e) {
       _error = 'Error updating todo: $e';
       print('Error in updateTodo: $e');
@@ -154,11 +153,16 @@ class TodoProvider with ChangeNotifier {
       // Try to sync with server
       final connectivityResult = await Connectivity().checkConnectivity();
       if (connectivityResult != ConnectivityResult.none) {
-        await ApiService.deleteTodo(todo.id!);
+        final serverReachable = await ApiService.testConnection();
+        if (serverReachable) {
+          await ApiService.deleteTodo(todo.id!);
+        }
       }
 
       // Reload todos
-      await loadTodos(todo.accountId);
+      _todos = await DatabaseService.instance.getTodos(todo.accountId);
+      _applyFilter();
+      notifyListeners();
     } catch (e) {
       _error = 'Error deleting todo: $e';
       print('Error in deleteTodo: $e');
@@ -190,5 +194,46 @@ class TodoProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // NOUVEAU : Méthode pour merger les tâches du serveur sans doublons
+  Future<void> _mergeTodoFromServer(Todo serverTodo) async {
+    final db = await DatabaseService.instance.database;
+    
+    // Vérifier si cette tâche existe déjà localement
+    final existingTodos = await db.query(
+      'todos',
+      where: 'server_id = ? OR (account_id = ? AND todo = ? AND date = ?)',
+      whereArgs: [
+        serverTodo.id,
+        serverTodo.accountId,
+        serverTodo.todo,
+        serverTodo.date.toIso8601String().split('T')[0],
+      ],
+    );
+    
+    if (existingTodos.isEmpty) {
+      // Nouvelle tâche du serveur, l'insérer
+      print('📥 Inserting new server todo: ${serverTodo.todo}');
+      await DatabaseService.instance.insertTodo(serverTodo.copyWith(synced: true));
+    } else {
+      // Tâche existante, mettre à jour si nécessaire
+      final existingTodo = existingTodos.first;
+      if (existingTodo['synced'] == 0) {
+        // Marquer comme synchronisée
+        print('✅ Marking existing todo as synced: ${serverTodo.todo}');
+        await db.update(
+          'todos',
+          {
+            'synced': 1,
+            'server_id': serverTodo.id,
+          },
+          where: 'id = ?',
+          whereArgs: [existingTodo['id']],
+        );
+      } else {
+        print('📋 Todo already synced: ${serverTodo.todo}');
+      }
+    }
   }
 }

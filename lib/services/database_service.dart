@@ -24,7 +24,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 6, // AUGMENTÉ encore pour forcer la mise à jour complète
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -72,12 +72,10 @@ class DatabaseService {
     print('🔄 Upgrading database from version $oldVersion to $newVersion');
     
     if (oldVersion < 6) {
-      // SOLUTION RADICALE : Recréer toutes les tables pour éviter les problèmes
       await _recreateAllTables(db);
     }
   }
 
-  // NOUVEAU : Recréer toutes les tables proprement
   Future<void> _recreateAllTables(Database db) async {
     try {
       print('🔄 Recreating all tables...');
@@ -151,7 +149,6 @@ class DatabaseService {
     }
   }
 
-  // CORRIGÉ : Sauvegarder utilisateur avec mot de passe (pour mode offline)
   Future<void> saveUserWithPassword(User user, String password) async {
     final db = await instance.database;
     final passwordHash = _hashPassword(password);
@@ -177,25 +174,51 @@ class DatabaseService {
     );
     
     print('✅ User saved successfully');
-    
-    // Vérifier immédiatement que l'utilisateur est bien sauvé
     await debugDatabase();
   }
 
-  // User operations
-  Future<void> saveUser(User user) async {
+  Future<void> saveUser(User user, {String? password}) async {
     final db = await instance.database;
+    
+    String? passwordHash;
+    String? passwordPlain;
+    
+    if (password != null) {
+      passwordHash = _hashPassword(password);
+      passwordPlain = password;
+      print('💾 Saving user with new password: ${user.email}');
+    } else {
+      final existingUser = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [user.email],
+        limit: 1,
+      );
+      
+      if (existingUser.isNotEmpty) {
+        passwordHash = existingUser.first['password_hash'] as String?;
+        passwordPlain = existingUser.first['password_plain'] as String?;
+        print('💾 Preserving existing password for user: ${user.email}');
+      } else {
+        print('💾 No existing password found for user: ${user.email}');
+      }
+    }
+    
     await db.insert(
       'users',
       {
         'id': user.id,
         'email': user.email,
         'profile_image_path': user.profileImagePath,
+        'password_hash': passwordHash,
+        'password_plain': passwordPlain,
         'is_synced': 1,
         'created_at': DateTime.now().toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    
+    print('✅ User saved: ${user.email} (ID: ${user.id})');
   }
 
   Future<User?> getUser() async {
@@ -208,7 +231,6 @@ class DatabaseService {
     return null;
   }
 
-  // NOUVEAU : Obtenir utilisateur par email
   Future<User?> getUserByEmail(String email) async {
     final db = await instance.database;
     final maps = await db.query(
@@ -224,7 +246,6 @@ class DatabaseService {
     return null;
   }
 
-  // CORRIGÉ : Vérifier les identifiants offline avec debug
   Future<bool> verifyUserCredentials(String email, String password) async {
     final db = await instance.database;
     
@@ -232,14 +253,12 @@ class DatabaseService {
     print('  - Email: $email');
     print('  - Password: $password');
     
-    // D'abord, afficher tous les utilisateurs pour debug
     final allUsers = await db.query('users');
     print('👥 All users in database (${allUsers.length}):');
     for (final user in allUsers) {
-      print('  - ID: ${user['id']}, Email: ${user['email']}, Hash: ${user['password_hash']}');
+      print('  - ID: ${user['id']}, Email: ${user['email']}, Hash: ${user['password_hash']}, Plain: ${user['password_plain']}');
     }
     
-    // Chercher l'utilisateur spécifique
     final userMaps = await db.query(
       'users',
       where: 'email = ?',
@@ -259,21 +278,18 @@ class DatabaseService {
     print('  - Stored password hash: ${userData['password_hash']}');
     print('  - Stored password plain: ${userData['password_plain']}');
     
-    // Vérifier avec le hash
     final passwordHash = _hashPassword(password);
     print('🔐 Generated hash for input: $passwordHash');
     
     final hashMatch = userData['password_hash'] == passwordHash;
     print('🔍 Hash match: $hashMatch');
     
-    // Vérifier aussi avec le mot de passe en clair (pour debug)
     final plainMatch = userData['password_plain'] == password;
     print('🔍 Plain match: $plainMatch');
     
     return hashMatch || plainMatch;
   }
 
-  // NOUVEAU : Obtenir tous les utilisateurs avec debug
   Future<List<User>> getAllUsers() async {
     final db = await instance.database;
     final maps = await db.query('users');
@@ -288,7 +304,6 @@ class DatabaseService {
     });
   }
 
-  // NOUVEAU : Obtenir les utilisateurs non synchronisés
   Future<List<User>> getOfflineUsers() async {
     final db = await instance.database;
     final maps = await db.query(
@@ -301,7 +316,6 @@ class DatabaseService {
     });
   }
 
-  // CORRIGÉ : Obtenir le mot de passe d'un utilisateur
   Future<String?> getUserPassword(String email) async {
     final db = await instance.database;
     final maps = await db.query(
@@ -318,96 +332,119 @@ class DatabaseService {
     return null;
   }
 
-  // NOUVEAU : Mettre à jour un utilisateur après synchronisation
+  // CORRIGÉ : Mettre à jour un utilisateur après synchronisation ET ses tâches
   Future<void> updateUserAfterSync(int oldId, User newUser) async {
     final db = await instance.database;
     
-    // Mettre à jour l'utilisateur
-    await db.update(
+    print('🔄 Updating user after sync:');
+    print('  - Old ID: $oldId');
+    print('  - New ID: ${newUser.id}');
+    print('  - Email: ${newUser.email}');
+    
+    // Récupérer le mot de passe de l'ancien utilisateur
+    final oldUserData = await db.query(
       'users',
-      {
-        'id': newUser.id,
-        'email': newUser.email,
-        'is_synced': 1,
-      },
       where: 'id = ?',
       whereArgs: [oldId],
+      limit: 1,
     );
     
-    // Mettre à jour les todos associés
-    await db.update(
+    String? passwordHash;
+    String? passwordPlain;
+    
+    if (oldUserData.isNotEmpty) {
+      passwordHash = oldUserData.first['password_hash'] as String?;
+      passwordPlain = oldUserData.first['password_plain'] as String?;
+      print('  - Preserving password from old user');
+    }
+    
+    // IMPORTANT : Mettre à jour TOUTES les tâches de l'ancien utilisateur AVANT de le supprimer
+    print('🔄 Updating todos account_id from $oldId to ${newUser.id}');
+    final todosUpdated = await db.update(
       'todos',
       {'account_id': newUser.id},
       where: 'account_id = ?',
       whereArgs: [oldId],
     );
+    print('✅ Updated $todosUpdated todos with new account_id');
+    
+    // Supprimer l'ancien utilisateur
+    await db.delete('users', where: 'id = ?', whereArgs: [oldId]);
+    
+    // Insérer le nouvel utilisateur avec le mot de passe préservé
+    await db.insert('users', {
+      'id': newUser.id,
+      'email': newUser.email,
+      'profile_image_path': newUser.profileImagePath,
+      'password_hash': passwordHash,
+      'password_plain': passwordPlain,
+      'is_synced': 1,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+    
+    print('✅ User updated after sync with preserved password and updated todos');
+    await debugDatabase();
   }
 
-  // MODIFIÉ : Ne pas supprimer l'utilisateur actuel lors du logout
   Future<void> deleteUser() async {
     final db = await instance.database;
-    // Ne supprimer que les données de session, pas l'utilisateur
-    print('🗑️ Clearing user session (keeping user data)');
-    // await db.delete('users'); // COMMENTÉ pour garder les utilisateurs
+    print('🗑️ Clearing user session (keeping user data and todos)');
+    // Ne rien supprimer - juste nettoyer la session
   }
 
-  // NOUVEAU : Supprimer vraiment tous les utilisateurs (pour reset complet)
   Future<void> deleteAllUsers() async {
     final db = await instance.database;
     await db.delete('users');
     print('🗑️ All users deleted');
   }
 
-  // Fonction helper pour hasher les mots de passe
   String _hashPassword(String password) {
     var bytes = utf8.encode(password);
     var digest = sha256.convert(bytes);
     return digest.toString();
   }
 
-  // NOUVEAU : Méthode de debug pour voir le contenu de la base
   Future<void> debugDatabase() async {
     final db = await instance.database;
     
     print('🔍 === DATABASE DEBUG ===');
     
-    // Afficher la structure de la table users
     final usersTableInfo = await db.rawQuery('PRAGMA table_info(users)');
     print('📋 Users table structure:');
     for (final column in usersTableInfo) {
       print('  - ${column['name']}: ${column['type']}');
     }
     
-    // Afficher la structure de la table todos
     final todosTableInfo = await db.rawQuery('PRAGMA table_info(todos)');
     print('📋 Todos table structure:');
     for (final column in todosTableInfo) {
       print('  - ${column['name']}: ${column['type']}');
     }
     
-    // Afficher tous les utilisateurs
     final users = await db.query('users');
     print('👥 Users in database (${users.length}):');
     for (final user in users) {
       print('  - ID: ${user['id']}, Email: ${user['email']}, Hash: ${user['password_hash']}, Plain: ${user['password_plain']}');
     }
     
-    // Afficher tous les todos
     final todos = await db.query('todos');
     print('📝 Todos in database (${todos.length}):');
     for (final todo in todos) {
-      print('  - ID: ${todo['id']}, Account: ${todo['account_id']}, Todo: ${todo['todo']}');
+      print('  - ID: ${todo['id']}, Account: ${todo['account_id']}, Todo: ${todo['todo']}, Synced: ${todo['synced']}');
     }
     
     print('🔍 === END DEBUG ===');
   }
 
-  // Todo operations - CORRIGÉ pour éviter l'erreur created_at
+  // Todo operations
   Future<int> insertTodo(Todo todo) async {
     final db = await instance.database;
     
     try {
       if (todo.id != null && todo.id! > 0) {
+        // Tâche avec ID serveur - utiliser INSERT OR REPLACE avec server_id
+        print('📥 Inserting/updating server todo: ${todo.todo} (ID: ${todo.id})');
+        
         await db.execute('''
           INSERT OR REPLACE INTO todos 
           (server_id, account_id, date, todo, done, synced, created_at) 
@@ -423,6 +460,19 @@ class DatabaseService {
         ]);
         return todo.id!;
       } else {
+        // Tâche locale - insérer normalement
+        print('💾 Inserting local todo: ${todo.todo}');
+        final maps = await db.query(
+          'todos',
+          where: 'account_id = ? AND date = ? AND todo = ?',
+          whereArgs: [todo.accountId, todo.date.toIso8601String().split('T')[0], todo.todo],
+        );
+        
+        if (maps.isNotEmpty) {
+          print('Duplicate todo found, skipping insertion');
+          return maps.first['id'] as int;
+        }
+        
         return await db.insert('todos', {
           'account_id': todo.accountId,
           'date': todo.date.toIso8601String().split('T')[0],
@@ -439,7 +489,6 @@ class DatabaseService {
     }
   }
 
-  // CORRIGÉ : getTodos sans created_at si la colonne n'existe pas
   Future<List<Todo>> getTodos(int accountId) async {
     final db = await instance.database;
     
@@ -448,8 +497,13 @@ class DatabaseService {
         'todos',
         where: 'account_id = ?',
         whereArgs: [accountId],
-        orderBy: 'date DESC, id DESC', // Utiliser id au lieu de created_at comme fallback
+        orderBy: 'date DESC, id DESC',
       );
+
+      print('📝 Found ${maps.length} todos for account $accountId');
+      for (final map in maps) {
+        print('  - Todo: ${map['todo']}, Account: ${map['account_id']}, Synced: ${map['synced']}');
+      }
 
       return List.generate(maps.length, (i) {
         return Todo(
@@ -463,7 +517,6 @@ class DatabaseService {
       });
     } catch (e) {
       print('Error getting todos: $e');
-      // Si erreur avec created_at, essayer sans
       try {
         final maps = await db.query(
           'todos',
@@ -524,17 +577,26 @@ class DatabaseService {
     }
   }
 
+  // CORRIGÉ : Obtenir les tâches non synchronisées avec le bon account_id
   Future<List<Todo>> getUnsyncedTodos(int accountId) async {
     final db = await instance.database;
+    
+    print('🔍 Looking for unsynced todos for account: $accountId');
+    
     final maps = await db.query(
       'todos',
       where: 'account_id = ? AND synced = 0',
       whereArgs: [accountId],
     );
 
+    print('📤 Found ${maps.length} unsynced todos for account $accountId');
+    for (final map in maps) {
+      print('  - Todo: ${map['todo']}, Account: ${map['account_id']}, Local ID: ${map['id']}');
+    }
+
     return List.generate(maps.length, (i) {
       return Todo(
-        id: maps[i]['id'] as int,
+        id: maps[i]['id'] as int, // Utiliser l'ID local pour les tâches non synchronisées
         accountId: maps[i]['account_id'] as int,
         date: DateTime.parse(maps[i]['date'] as String),
         todo: maps[i]['todo'] as String,
@@ -556,16 +618,25 @@ class DatabaseService {
         where: 'id = ?',
         whereArgs: [localId],
       );
+      print('✅ Marked todo $localId as synced with server ID $serverId');
     } catch (e) {
       print('Error marking todo as synced: $e');
     }
   }
 
+  // NOUVEAU : Méthode pour nettoyer seulement lors d'un reset complet
+  Future<void> clearUserSession() async {
+    final db = await instance.database;
+    // Ne supprimer que les données de session, pas les données utilisateur
+    print('🧹 Session cleared, user data preserved');
+  }
+
+  // MODIFIÉ : clearTodos ne doit être utilisé que pour un reset complet
   Future<void> clearTodos() async {
     final db = await instance.database;
     try {
       await db.delete('todos');
-      print('Cleared all todos from local database');
+      print('🗑️ All todos cleared (complete reset)');
     } catch (e) {
       print('Error clearing todos: $e');
     }

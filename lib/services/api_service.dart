@@ -5,7 +5,7 @@ import '../models/todo.dart';
 
 class ApiService {
   // MODIFIEZ cette ligne avec votre adresse IP actuelle
-  static const String baseUrl = 'http://192.168.1.8/todo';
+  static const String baseUrl = 'http://192.168.1.0/todo';
   // Exemples possibles :
   // static const String baseUrl = 'http://192.168.1.108/todo';
   // static const String baseUrl = 'http://192.168.0.105/todo';

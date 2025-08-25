@@ -38,15 +38,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final todoProvider = Provider.of<TodoProvider>(context, listen: false);
-    final weatherProvider =
-        Provider.of<WeatherProvider>(context, listen: false);
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
+    final weatherProvider = Provider.of<WeatherProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
 
     if (authProvider.user != null) {
-      // AJOUTÉ : Charger la photo de profil pour cet utilisateur spécifique
       await profileProvider.loadProfileImageForUser(authProvider.user!.id);
-
       await todoProvider.loadTodos(authProvider.user!.id);
       await weatherProvider.loadWeatherData();
     }
@@ -54,16 +50,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _logout() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-
-    // MODIFIÉ : Nettoyer seulement les données temporaires, pas les photos
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    
     await profileProvider.clearTemporaryData();
     await authProvider.logout();
-
+    
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
+  // NOUVEAU : Synchronisation manuelle
+  Future<void> _manualSync() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.manualSync();
+    
+    // Recharger les données après synchronisation
+    await _loadData();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Synchronisation terminée')),
       );
     }
   }
@@ -92,10 +101,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: SafeArea(
               child: Column(
                 children: [
-                  // Header avec titre et bouton déconnexion
+                  // Header avec titre et boutons
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -114,45 +122,79 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                           ),
                         ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.logout,
-                              color: Colors.white,
-                              size: 22,
+                        Row(
+                          children: [
+                            // NOUVEAU : Bouton de synchronisation
+                            Consumer<AuthProvider>(
+                              builder: (context, authProvider, child) {
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: IconButton(
+                                    icon: authProvider.isSyncing
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.sync,
+                                            color: Colors.white,
+                                            size: 22,
+                                          ),
+                                    onPressed: authProvider.isSyncing ? null : _manualSync,
+                                    tooltip: 'Synchroniser',
+                                  ),
+                                );
+                              },
                             ),
-                            onPressed: _logout,
-                            tooltip: 'Se déconnecter',
-                          ),
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.logout,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                                onPressed: _logout,
+                                tooltip: 'Se déconnecter',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-
+                  
                   // Informations utilisateur et météo
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _buildUserInfo(),
                   ),
-
+                  
                   const SizedBox(height: 16),
-
+                  
                   // Barre de recherche
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _buildSearchBar(),
                   ),
-
+                  
                   const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
-
+          
           // Onglets de navigation
           Container(
             color: Colors.white,
@@ -178,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-
+          
           // Contenu des onglets
           Expanded(
             child: TabBarView(
@@ -203,8 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildUserInfo() {
     return Consumer3<AuthProvider, WeatherProvider, ProfileProvider>(
-      builder:
-          (context, authProvider, weatherProvider, profileProvider, child) {
+      builder: (context, authProvider, weatherProvider, profileProvider, child) {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -233,16 +274,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       CircleAvatar(
                         radius: 32,
                         backgroundColor: Colors.white,
-                        backgroundImage: profileProvider.profileImagePath !=
-                                null
+                        backgroundImage: profileProvider.profileImagePath != null
                             ? FileImage(File(profileProvider.profileImagePath!))
                             : null,
                         child: profileProvider.profileImagePath == null
-                            ? const Icon(Icons.person,
-                                size: 32, color: Colors.blue)
+                            ? const Icon(Icons.person, size: 32, color: Colors.blue)
                             : null,
                       ),
-                      // Indicateur visuel pour montrer que c'est cliquable
                       Positioned(
                         bottom: 0,
                         right: 0,
@@ -280,8 +318,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         Expanded(
                           child: Text(
-                            authProvider.user?.email.split('@')[0] ??
-                                'Utilisateur',
+                            authProvider.user?.email.split('@')[0] ?? 'Utilisateur',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -296,16 +333,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                        // Afficher l'ID utilisateur pour debug
-                        if (authProvider.user != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                        // NOUVEAU : Indicateur de mode offline/online
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: authProvider.isOfflineMode 
+                                ? Colors.orange.withOpacity(0.8)
+                                : Colors.green.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(10),
                           ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                authProvider.isOfflineMode ? Icons.wifi_off : Icons.wifi,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                authProvider.isOfflineMode ? 'Offline' : 'Online',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -342,17 +398,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                           height: 12,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<
-                                                    Color>(
-                                                Colors.white.withOpacity(0.8)),
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withOpacity(0.8)),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Chargement...',
                                           style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.8),
+                                            color: Colors.white.withOpacity(0.8),
                                             fontSize: 14,
                                           ),
                                         ),
@@ -373,12 +426,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: IconButton(
-                            onPressed: weatherProvider.isLoading
-                                ? null
+                            onPressed: weatherProvider.isLoading 
+                                ? null 
                                 : () => weatherProvider.refreshWeather(),
                             icon: Icon(
-                              weatherProvider.isLoading
-                                  ? Icons.hourglass_empty
+                              weatherProvider.isLoading 
+                                  ? Icons.hourglass_empty 
                                   : Icons.refresh,
                               color: Colors.white,
                               size: 18,
@@ -438,8 +491,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(30),
                 borderSide: BorderSide.none,
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             ),
             onChanged: (value) {
               todoProvider.searchTodos(value);
@@ -492,8 +544,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  filter == 'completed'
-                      ? Icons.check_circle_outline
+                  filter == 'completed' 
+                      ? Icons.check_circle_outline 
                       : filter == 'pending'
                           ? Icons.pending_actions
                           : Icons.task_alt,
@@ -502,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  filter == 'completed'
+                  filter == 'completed' 
                       ? 'Aucune tâche terminée'
                       : filter == 'pending'
                           ? 'Aucune tâche en cours'
