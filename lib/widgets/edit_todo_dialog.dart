@@ -37,6 +37,24 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
       initialDate: _selectedDate,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('fr', 'FR'),
+      helpText: 'Sélectionner une date',
+      cancelText: 'Annuler',
+      confirmText: 'OK',
+      fieldLabelText: 'Entrer la date',
+      fieldHintText: 'jj/mm/aaaa',
+      errorFormatText: 'Format de date invalide',
+      errorInvalidText: 'Date invalide',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Colors.purple,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -57,7 +75,7 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
     final updatedTodo = widget.todo.copyWith(
       todo: _todoController.text.trim(),
       date: _selectedDate,
-      synced: false, // Mark as unsynced since it's been modified
+      synced: false,
     );
 
     try {
@@ -66,13 +84,19 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tâche modifiée avec succès')),
+          const SnackBar(
+            content: Text('Tâche modifiée avec succès'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la modification: $e')),
+          SnackBar(
+            content: Text('Erreur lors de la modification: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -81,7 +105,11 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Modifier la tâche'),
+      backgroundColor: Colors.white,
+      title: const Text(
+        'Modifier la tâche',
+        style: TextStyle(color: Colors.black87),
+      ),
       content: Form(
         key: _formKey,
         child: Column(
@@ -92,6 +120,9 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
               decoration: const InputDecoration(
                 labelText: 'Description de la tâche',
                 border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.purple, width: 2),
+                ),
               ),
               maxLines: 3,
               validator: (value) {
@@ -107,12 +138,12 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
+                  border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today),
+                    const Icon(Icons.calendar_today, color: Colors.purple),
                     const SizedBox(width: 8),
                     Text('Date : ${_formatDate(_selectedDate)}'),
                   ],
@@ -125,17 +156,24 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
         ),
         Consumer<TodoProvider>(
           builder: (context, todoProvider, child) {
             return ElevatedButton(
               onPressed: todoProvider.isLoading ? null : _updateTodo,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+                foregroundColor: Colors.white,
+              ),
               child: todoProvider.isLoading
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
                     )
                   : const Text('Modifier'),
             );

@@ -1,5 +1,5 @@
 name: flutter_todo_app
-description: A comprehensive Todo application with offline support
+description: Une application Todo complète avec prise en charge hors ligne
 
 publish_to: 'none'
 
@@ -10,6 +10,8 @@ environment:
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   
   # State Management
@@ -36,7 +38,7 @@ dependencies:
   
   # UI
   cupertino_icons: ^1.0.2
-  intl: ^0.18.1
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

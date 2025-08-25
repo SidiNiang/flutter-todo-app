@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // SIMPLIFIÉ : Chargement des données sans logique de migration complexe
   Future<void> _loadData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final todoProvider = Provider.of<TodoProvider>(context, listen: false);
@@ -43,15 +42,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
 
     if (authProvider.user != null) {
-      print('🔄 Loading data for user: ${authProvider.user!.id}');
+      print('Chargement des données pour l\'utilisateur: ${authProvider.user!.id}');
       
-      // Le ProfileProvider détecte automatiquement les changements d'ID et fait la migration
       await profileProvider.loadProfileImageForUser(authProvider.user!.id);
-      
       await todoProvider.loadTodos(authProvider.user!.id);
       await weatherProvider.loadWeatherData();
       
-      print('✅ Data loading completed');
+      print('Chargement des données terminé');
     }
   }
 
@@ -70,19 +67,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _manualSync() async {
-    print('🔄 Manual sync requested');
+    print('Synchronisation manuelle demandée');
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Déboguer l'état avant sync
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     profileProvider.debugProfileState();
     
     await authProvider.manualSync();
-    
-    // Recharger les données après synchronisation
     await _loadData();
     
-    // Déboguer l'état après sync
     profileProvider.debugProfileState();
     
     if (mounted) {
@@ -103,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Photo de profil'),
         content: const Text('Choisissez une source pour votre photo de profil'),
         actions: [
@@ -111,20 +105,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Navigator.of(context).pop();
               _pickImageFromGallery();
             },
-            icon: const Icon(Icons.photo_library),
-            label: const Text('Galerie'),
+            icon: const Icon(Icons.photo_library, color: Colors.purple),
+            label: const Text('Galerie', style: TextStyle(color: Colors.purple)),
           ),
           TextButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
               _takePhoto();
             },
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Caméra'),
+            icon: const Icon(Icons.camera_alt, color: Colors.purple),
+            label: const Text('Caméra', style: TextStyle(color: Colors.purple)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
           ),
         ],
       ),
@@ -139,7 +133,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       
       if (mounted && profileProvider.lastError == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo de profil mise à jour')),
+          const SnackBar(
+            content: Text('Photo de profil mise à jour'),
+            backgroundColor: Colors.purple,
+          ),
         );
       } else if (mounted && profileProvider.lastError != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -171,7 +168,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       
       if (mounted && profileProvider.lastError == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo de profil mise à jour')),
+          const SnackBar(
+            content: Text('Photo de profil mise à jour'),
+            backgroundColor: Colors.purple,
+          ),
         );
       } else if (mounted && profileProvider.lastError != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -198,21 +198,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       body: Column(
         children: [
-          // AppBar personnalisée avec plus d'espace
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.blue, Color(0xFF1976D2)],
+                colors: [Colors.purple, Color(0xFF9C27B0)],
               ),
             ),
             child: SafeArea(
               child: Column(
                 children: [
-                  // Header avec titre et boutons
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Row(
@@ -285,7 +284,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   
-                  // Informations utilisateur et météo
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _buildUserInfo(),
@@ -293,7 +291,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   
                   const SizedBox(height: 16),
                   
-                  // Barre de recherche
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _buildSearchBar(),
@@ -305,14 +302,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           
-          // Onglets de navigation
           Container(
             color: Colors.white,
             child: TabBar(
               controller: _tabController,
-              labelColor: Colors.blue,
+              labelColor: Colors.purple,
               unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.blue,
+              indicatorColor: Colors.purple,
               indicatorWeight: 3,
               tabs: const [
                 Tab(
@@ -331,7 +327,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           
-          // Contenu des onglets
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -346,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTodoDialog,
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.purple,
         tooltip: 'Ajouter une tâche',
         child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
@@ -359,9 +354,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -370,10 +371,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 3),
+                    border: Border.all(color: Colors.purple, width: 3),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.purple.withOpacity(0.3),
                         blurRadius: 6,
                         offset: const Offset(0, 3),
                       ),
@@ -383,12 +384,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: Colors.white,
+                        backgroundColor: Colors.grey.shade100,
                         backgroundImage: profileProvider.profileImagePath != null
                             ? FileImage(File(profileProvider.profileImagePath!))
                             : null,
                         child: profileProvider.profileImagePath == null
-                            ? const Icon(Icons.person, size: 32, color: Colors.blue)
+                            ? const Icon(Icons.person, size: 32, color: Colors.purple)
                             : null,
                       ),
                       if (profileProvider.isLoading)
@@ -417,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
-                              color: Colors.blue,
+                              color: Colors.purple,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -439,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Text(
                       'Bienvenue,',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.grey.shade600,
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
@@ -450,16 +451,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Text(
                             authProvider.user?.email.split('@')[0] ?? 'Utilisateur',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Colors.black87,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(1, 1),
-                                  blurRadius: 2,
-                                  color: Colors.black26,
-                                ),
-                              ],
                             ),
                           ),
                         ),
@@ -467,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: authProvider.isOfflineMode 
-                                ? Colors.orange.withOpacity(0.8)
+                                ? Colors.red.withOpacity(0.8)
                                 : Colors.green.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -481,7 +475,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                authProvider.isOfflineMode ? 'Offline' : 'Online',
+                                authProvider.isOfflineMode ? 'Hors ligne' : 'En ligne',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -498,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         Icon(
                           Icons.location_on,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.purple,
                           size: 16,
                         ),
                         const SizedBox(width: 4),
@@ -507,16 +501,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ? Text(
                                   '${weatherProvider.weatherData!.cityName}, ${weatherProvider.weatherData!.temperature.toStringAsFixed(1)}°C',
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: Colors.black87,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
-                                    shadows: [
-                                      Shadow(
-                                        offset: Offset(1, 1),
-                                        blurRadius: 2,
-                                        color: Colors.black26,
-                                      ),
-                                    ],
                                   ),
                                 )
                               : weatherProvider.isLoading
@@ -527,14 +514,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                           height: 12,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withOpacity(0.8)),
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Chargement...',
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(0.8),
+                                            color: Colors.grey.shade600,
                                             fontSize: 14,
                                           ),
                                         ),
@@ -543,7 +530,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   : Text(
                                       'Météo indisponible',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.7),
+                                        color: Colors.grey.shade500,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -551,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Container(
                           margin: const EdgeInsets.only(left: 8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.purple.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: IconButton(
@@ -562,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               weatherProvider.isLoading 
                                   ? Icons.hourglass_empty 
                                   : Icons.refresh,
-                              color: Colors.white,
+                              color: Colors.purple,
                               size: 18,
                             ),
                             tooltip: 'Actualiser la météo',
@@ -592,9 +579,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 8,
-                offset: const Offset(0, 4),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -604,7 +591,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             decoration: InputDecoration(
               hintText: 'Rechercher des tâches...',
               hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16),
-              prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 24),
+              prefixIcon: Icon(Icons.search, color: Colors.purple, size: 24),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: Icon(Icons.clear, color: Colors.grey[600]),
@@ -619,6 +606,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
                 borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: const BorderSide(color: Colors.purple, width: 2),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             ),
@@ -640,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
                 ),
                 SizedBox(height: 16),
                 Text(
@@ -712,7 +703,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         return RefreshIndicator(
           onRefresh: _loadData,
-          color: Colors.blue,
+          color: Colors.purple,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: todos.length,

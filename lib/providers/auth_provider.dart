@@ -26,7 +26,7 @@ class AuthProvider with ChangeNotifier {
   void _startConnectivityMonitoring() {
     Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
       if (result != ConnectivityResult.none && _user != null) {
-        print('🌐 Connectivity restored, starting auto-sync...');
+        print('Connectivité restaurée, démarrage de la synchronisation automatique...');
         _autoSync();
       }
     });
@@ -34,33 +34,33 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _loadUser() async {
     try {
-      print('👤 Loading user from database...');
+      print('Chargement de l\'utilisateur depuis la base de données...');
       
       final prefs = await SharedPreferences.getInstance();
       final loggedInUserId = prefs.getInt('logged_in_user_id');
       
       if (loggedInUserId != null) {
-        print('🔍 Looking for user with ID: $loggedInUserId');
+        print('Recherche de l\'utilisateur avec l\'ID: $loggedInUserId');
         _user = await DatabaseService.instance.getUserById(loggedInUserId);
         
         if (_user != null) {
-          print('✅ User loaded: ${_user!.email} (ID: ${_user!.id})');
+          print('Utilisateur chargé: ${_user!.email} (ID: ${_user!.id})');
           _isOfflineMode = _user!.id < 0;
         } else {
-          print('⚠️ User with ID $loggedInUserId not found in database');
+          print('API échouée, basculement vers inscription hors ligne');
           await prefs.remove('logged_in_user_id');
           await prefs.setBool('is_logged_in', false);
           _isOfflineMode = false;
         }
       } else {
-        print('⚠️ No logged in user ID found in SharedPreferences');
+        print('Aucun ID d\'utilisateur connecté trouvé dans SharedPreferences');
         _user = null;
         _isOfflineMode = false;
       }
       
       notifyListeners();
     } catch (e) {
-      print('❌ Error loading user: $e');
+      print('Erreur lors du chargement de l\'utilisateur: $e');
       _user = null;
       _isOfflineMode = false;
       notifyListeners();
@@ -78,7 +78,7 @@ class AuthProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('Connectivity check error: $e');
+      print('Erreur de vérification de connectivité: $e');
       return false;
     }
   }
@@ -89,15 +89,15 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('AuthProvider: Début de l\'inscription pour $email');
+      print('FournisseurAuth: Début de l\'inscription pour $email');
       
       final isOnline = await _checkConnectivity();
       
       if (isOnline) {
-        print('📶 Mode ONLINE - Inscription via API');
+        print('Mode EN LIGNE - Inscription via API');
         final user = await ApiService.register(email, password);
         if (user != null) {
-          print('✅ Inscription réussie via API');
+          print('Inscription réussie via API');
           _user = user;
           _isOfflineMode = false;
           await DatabaseService.instance.saveUser(user, password: password);
@@ -106,16 +106,16 @@ class AuthProvider with ChangeNotifier {
           notifyListeners();
           return true;
         } else {
-          print('⚠️ API failed, switching to offline registration');
+          print('API échouée, basculement vers inscription hors ligne');
           return await _registerOffline(email, password);
         }
       } else {
-        print('📴 Mode OFFLINE - Inscription locale');
+        print('Mode HORS LIGNE - Inscription locale');
         return await _registerOffline(email, password);
       }
     } catch (e) {
-      print('AuthProvider: Exception lors de l\'inscription: $e');
-      print('🔄 Trying offline registration as fallback');
+      print('FournisseurAuth: Exception lors de l\'inscription: $e');
+      print('Tentative d\'inscription hors ligne en secours');
       return await _registerOffline(email, password);
     }
   }
@@ -149,7 +149,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('Offline registration error: $e');
+      print('Erreur d\'inscription hors ligne: $e');
       _error = 'Erreur d\'inscription hors ligne: $e';
       _isLoading = false;
       notifyListeners();
@@ -163,15 +163,15 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('AuthProvider: Début de la connexion pour $email');
+      print('FournisseurAuth: Début de la connexion pour $email');
       
       final isOnline = await _checkConnectivity();
       
       if (isOnline) {
-        print('📶 Mode ONLINE - Connexion via API');
+        print('Mode EN LIGNE - Connexion via API');
         final user = await ApiService.login(email, password);
         if (user != null) {
-          print('✅ Connexion réussie via API');
+          print('Connexion réussie via API');
           _user = user;
           _isOfflineMode = false;
           await DatabaseService.instance.saveUser(user, password: password);
@@ -182,16 +182,16 @@ class AuthProvider with ChangeNotifier {
           _autoSync();
           return true;
         } else {
-          print('⚠️ API failed, trying offline login');
+          print('API échouée, tentative de connexion hors ligne');
           return await _loginOffline(email, password);
         }
       } else {
-        print('📴 Mode OFFLINE - Connexion locale');
+        print('Mode HORS LIGNE - Connexion locale');
         return await _loginOffline(email, password);
       }
     } catch (e) {
-      print('AuthProvider: Exception lors de la connexion: $e');
-      print('🔄 Trying offline login as fallback');
+      print('FournisseurAuth: Exception lors de la connexion: $e');
+      print('Tentative de connexion hors ligne en secours');
       return await _loginOffline(email, password);
     }
   }
@@ -219,7 +219,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      print('Offline login error: $e');
+      print('Erreur de connexion hors ligne: $e');
       _error = 'Erreur de connexion hors ligne: $e';
       _isLoading = false;
       notifyListeners();
@@ -234,14 +234,13 @@ class AuthProvider with ChangeNotifier {
       final isOnline = await _checkConnectivity();
       if (!isOnline) return;
 
-      print('🔄 Starting auto-sync...');
+      print('Démarrage de la synchronisation automatique...');
       await syncOfflineData();
     } catch (e) {
-      print('Auto-sync error: $e');
+      print('Erreur de synchronisation automatique: $e');
     }
   }
 
-  // MODIFIÉ : Synchronisation simplifiée sans flag de migration
   Future<void> syncOfflineData() async {
     if (_isSyncing) return;
     
@@ -251,106 +250,98 @@ class AuthProvider with ChangeNotifier {
     try {
       final isOnline = await _checkConnectivity();
       if (!isOnline) {
-        print('❌ Cannot sync: no internet connection');
+        print('Impossible de synchroniser: aucune connexion internet');
         return;
       }
 
-      print('🔄 Starting complete offline data sync...');
+      print('Démarrage de la synchronisation complète des données hors ligne...');
 
-      // Sauvegarder l'ancien ID utilisateur pour référence
       final oldUserId = _user?.id;
-      print('📋 Current user ID before sync: $oldUserId');
+      print('ID utilisateur actuel avant synchronisation: $oldUserId');
 
-      // Synchroniser les utilisateurs
       await _syncOfflineUsers();
 
-      // Recharger l'utilisateur après sync
       if (_user != null) {
         final updatedUser = await DatabaseService.instance.getUserByEmail(_user!.email);
         if (updatedUser != null && updatedUser.id != oldUserId) {
-          print('🔄 User ID changed from $oldUserId to ${updatedUser.id}');
+          print('ID utilisateur changé de $oldUserId vers ${updatedUser.id}');
           _user = updatedUser;
           _isOfflineMode = false;
           await _saveLoginState(true, _user!.id);
-          
-          // IMPORTANT : Ne pas appeler notifyListeners() ici pour éviter les rebuilds multiples
-          // Le ProfileProvider détectera automatiquement le changement d'ID
         }
       }
 
-      // Synchroniser les tâches
       if (_user != null) {
         await _syncOfflineTodos();
       }
 
-      print('✅ Offline data sync completed');
+      print('Synchronisation des données hors ligne terminée');
       
     } catch (e) {
-      print('❌ Sync error: $e');
+      print('Erreur de synchronisation: $e');
     } finally {
       _isSyncing = false;
-      notifyListeners(); // Un seul notifyListeners() à la fin
+      notifyListeners();
     }
   }
 
   Future<void> _syncOfflineUsers() async {
     try {
       final offlineUsers = await DatabaseService.instance.getOfflineUsers();
-      print('📤 Found ${offlineUsers.length} offline users to sync');
+      print('${offlineUsers.length} utilisateurs hors ligne trouvés pour synchronisation');
       
       for (final offlineUser in offlineUsers) {
         if (offlineUser.id < 0) {
-          print('🔄 Syncing offline user: ${offlineUser.email}');
+          print('Synchronisation de l\'utilisateur hors ligne: ${offlineUser.email}');
           
           final password = await DatabaseService.instance.getUserPassword(offlineUser.email);
           if (password != null) {
             final serverUser = await ApiService.register(offlineUser.email, password);
             if (serverUser != null) {
-              print('✅ User synced to server: ${offlineUser.email} -> ID ${serverUser.id}');
+              print('Utilisateur synchronisé vers le serveur: ${offlineUser.email} -> ID ${serverUser.id}');
               
               await DatabaseService.instance.updateUserAfterSync(offlineUser.id, serverUser);
               
-              // Mettre à jour l'utilisateur actuel si c'est lui qui a été synchronisé
               if (_user?.id == offlineUser.id) {
                 _user = serverUser;
                 _isOfflineMode = false;
-                print('🔄 Current user updated to server ID: ${serverUser.id}');
+                print('Utilisateur actuel mis à jour vers l\'ID serveur: ${serverUser.id}');
               }
             } else {
-              print('⚠️ Failed to sync user to server: ${offlineUser.email}');
+              print('Échec de synchronisation de l\'utilisateur vers le serveur: ${offlineUser.email}');
             }
           }
         }
       }
     } catch (e) {
-      print('❌ Error syncing offline users: $e');
+      print('Erreur lors de la synchronisation des utilisateurs hors ligne: $e');
     }
   }
 
   Future<void> _syncOfflineTodos() async {
     try {
-      print('🔄 Starting todos sync for user ID: ${_user!.id}');
+      print('Démarrage de la synchronisation des tâches pour l\'utilisateur ID: ${_user!.id}');
       
       final unsyncedTodos = await DatabaseService.instance.getUnsyncedTodos(_user!.id);
-      print('📤 Found ${unsyncedTodos.length} unsynced todos');
+      print('${unsyncedTodos.length} tâches non synchronisées trouvées');
       
       for (final todo in unsyncedTodos) {
-        print('🔄 Syncing todo: ${todo.todo} (Account: ${todo.accountId})');
+        print('Synchronisation de la tâche: ${todo.todo} (Compte: ${todo.accountId})');
         
         final todoForApi = todo.copyWith(accountId: _user!.id);
         
         final success = await ApiService.createTodo(todoForApi);
         if (success) {
           await DatabaseService.instance.markTodoAsSynced(todo.id!, todo.id!);
-          print('✅ Todo synced: ${todo.todo}');
+          print('Tâche synchronisée: ${todo.todo}');
         } else {
-          print('⚠️ Failed to sync todo: ${todo.todo}');
+          print('Échec de synchronisation de la tâche: ${todo.todo}');
         }
       }
       
-      print('✅ Todos sync completed');
+      print('Synchronisation des tâches terminée');
     } catch (e) {
-      print('❌ Error syncing offline todos: $e');
+      print('Erreur lors de la synchronisation des tâches hors ligne: $e');
     }
   }
 
@@ -360,7 +351,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> logout() async {
     final currentUserId = _user?.id;
-    print('🚪 Logging out user $currentUserId');
+    print('Déconnexion de l\'utilisateur $currentUserId');
   
     _user = null;
     _isOfflineMode = false;
@@ -370,7 +361,7 @@ class AuthProvider with ChangeNotifier {
     await DatabaseService.instance.clearUserSession();
     await _saveLoginState(false, null);
   
-    print('✅ User logged out, session cleared');
+    print('Utilisateur déconnecté, session effacée');
     notifyListeners();
   }
 
@@ -380,10 +371,10 @@ class AuthProvider with ChangeNotifier {
     
     if (isLoggedIn && userId != null) {
       await prefs.setInt('logged_in_user_id', userId);
-      print('💾 Saved login state: logged_in=true, user_id=$userId');
+      print('État de connexion sauvegardé: connecté=true, id_utilisateur=$userId');
     } else {
       await prefs.remove('logged_in_user_id');
-      print('💾 Saved login state: logged_in=false, user_id=null');
+      print('État de connexion sauvegardé: connecté=false, id_utilisateur=null');
     }
   }
 
@@ -405,18 +396,18 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> initializeAuth() async {
     try {
-      print('🔐 Initializing authentication...');
+      print('Initialisation de l\'authentification...');
       
       final wasLoggedIn = await isLoggedIn();
-      print('📋 Was logged in: $wasLoggedIn');
+      print('Était connecté: $wasLoggedIn');
       
       if (wasLoggedIn) {
         await _loadUser();
         
         if (_user != null) {
-          print('✅ User loaded from database: ${_user!.email} (ID: ${_user!.id})');
+          print('Utilisateur chargé depuis la base de données: ${_user!.email} (ID: ${_user!.id})');
           _isOfflineMode = _user!.id < 0;
-          print('📶 Mode: ${_isOfflineMode ? "OFFLINE" : "ONLINE"}');
+          print('Mode: ${_isOfflineMode ? "HORS LIGNE" : "EN LIGNE"}');
           
           if (!_isOfflineMode) {
             _autoSync();
@@ -425,16 +416,16 @@ class AuthProvider with ChangeNotifier {
           notifyListeners();
           return true;
         } else {
-          print('⚠️ No user found in database despite login state');
+          print('Aucun utilisateur trouvé dans la base de données malgré l\'état de connexion');
           await _saveLoginState(false, null);
           return false;
         }
       } else {
-        print('📴 User was not logged in');
+        print('L\'utilisateur n\'était pas connecté');
         return false;
       }
     } catch (e) {
-      print('❌ Error initializing auth: $e');
+      print('Erreur lors de l\'initialisation de l\'authentification: $e');
       return false;
     }
   }

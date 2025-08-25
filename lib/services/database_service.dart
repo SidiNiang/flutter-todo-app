@@ -31,7 +31,7 @@ class DatabaseService {
   }
 
   Future _createDB(Database db, int version) async {
-    print('🏗️ Creating database tables...');
+    print('Creating database tables...');
     
     await db.execute('''
       CREATE TABLE users (
@@ -65,11 +65,11 @@ class DatabaseService {
       WHERE server_id IS NOT NULL
     ''');
     
-    print('✅ Database tables created successfully');
+    print('Database tables created successfully');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    print('🔄 Upgrading database from version $oldVersion to $newVersion');
+    print('Upgrading database from version $oldVersion to $newVersion');
     
     if (oldVersion < 6) {
       await _recreateAllTables(db);
@@ -78,7 +78,7 @@ class DatabaseService {
 
   Future<void> _recreateAllTables(Database db) async {
     try {
-      print('🔄 Recreating all tables...');
+      print('Recreating all tables...');
       
       // Sauvegarder les données existantes
       List<Map<String, dynamic>> existingUsers = [];
@@ -86,14 +86,14 @@ class DatabaseService {
       
       try {
         existingUsers = await db.query('users');
-        print('📦 Backed up ${existingUsers.length} users');
+        print('Backed up ${existingUsers.length} users');
       } catch (e) {
         print('No existing users to backup: $e');
       }
       
       try {
         existingTodos = await db.query('todos');
-        print('📦 Backed up ${existingTodos.length} todos');
+        print('Backed up ${existingTodos.length} todos');
       } catch (e) {
         print('No existing todos to backup: $e');
       }
@@ -141,11 +141,11 @@ class DatabaseService {
         }
       }
       
-      print('✅ All tables recreated successfully');
-      print('📊 Restored ${existingUsers.length} users and ${existingTodos.length} todos');
+      print('All tables recreated successfully');
+      print('Restored ${existingUsers.length} users and ${existingTodos.length} todos');
       
     } catch (e) {
-      print('❌ Error recreating tables: $e');
+      print('Error recreating tables: $e');
     }
   }
 
@@ -153,7 +153,7 @@ class DatabaseService {
     final db = await instance.database;
     final passwordHash = _hashPassword(password);
     
-    print('💾 Saving user with password:');
+    print('Saving user with password:');
     print('  - Email: ${user.email}');
     print('  - ID: ${user.id}');
     print('  - Password: $password');
@@ -173,7 +173,7 @@ class DatabaseService {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     
-    print('✅ User saved successfully');
+    print('User saved successfully');
     await debugDatabase();
   }
 
@@ -186,7 +186,7 @@ class DatabaseService {
     if (password != null) {
       passwordHash = _hashPassword(password);
       passwordPlain = password;
-      print('💾 Saving user with new password: ${user.email}');
+      print('Saving user with new password: ${user.email}');
     } else {
       final existingUser = await db.query(
         'users',
@@ -198,9 +198,9 @@ class DatabaseService {
       if (existingUser.isNotEmpty) {
         passwordHash = existingUser.first['password_hash'] as String?;
         passwordPlain = existingUser.first['password_plain'] as String?;
-        print('💾 Preserving existing password for user: ${user.email}');
+        print('Preserving existing password for user: ${user.email}');
       } else {
-        print('💾 No existing password found for user: ${user.email}');
+        print('No existing password found for user: ${user.email}');
       }
     }
     
@@ -218,31 +218,31 @@ class DatabaseService {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     
-    print('✅ User saved: ${user.email} (ID: ${user.id})');
+    print('User saved: ${user.email} (ID: ${user.id})');
   }
 
   // ANCIEN : Méthode dépréciée - ne plus utiliser
   Future<User?> getUser() async {
     try {
       final db = await instance.database;
-      print('⚠️ WARNING: getUser() is deprecated, use getUserById() instead');
+      print('WARNING: getUser() is deprecated, use getUserById() instead');
       
       final maps = await db.query('users', limit: 1);
-      print('📊 Found ${maps.length} users in database');
+      print('Found ${maps.length} users in database');
       
       if (maps.isNotEmpty) {
         final userData = maps.first;
-        print('👤 User data: ID=${userData['id']}, Email=${userData['email']}');
+        print('User data: ID=${userData['id']}, Email=${userData['email']}');
         
         final user = User.fromJson(userData);
-        print('✅ User object created successfully');
+        print('User object created successfully');
         return user;
       } else {
-        print('⚠️ No users found in database');
+        print('No users found in database');
         return null;
       }
     } catch (e) {
-      print('❌ Error getting user: $e');
+      print('Error getting user: $e');
       return null;
     }
   }
@@ -251,7 +251,7 @@ class DatabaseService {
   Future<User?> getUserById(int userId) async {
     try {
       final db = await instance.database;
-      print('🔍 Looking for user with ID: $userId');
+      print('Looking for user with ID: $userId');
       
       final maps = await db.query(
         'users',
@@ -262,14 +262,14 @@ class DatabaseService {
       
       if (maps.isNotEmpty) {
         final userData = maps.first;
-        print('✅ User found: ID=${userData['id']}, Email=${userData['email']}');
+        print('User found: ID=${userData['id']}, Email=${userData['email']}');
         return User.fromJson(userData);
       } else {
-        print('❌ User with ID $userId not found');
+        print('User with ID $userId not found');
         return null;
       }
     } catch (e) {
-      print('❌ Error getting user by ID: $e');
+      print('Error getting user by ID: $e');
       return null;
     }
   }
@@ -292,12 +292,12 @@ class DatabaseService {
   Future<bool> verifyUserCredentials(String email, String password) async {
     final db = await instance.database;
     
-    print('🔍 Verifying credentials:');
+    print('Verifying credentials:');
     print('  - Email: $email');
     print('  - Password: $password');
     
     final allUsers = await db.query('users');
-    print('👥 All users in database (${allUsers.length}):');
+    print('All users in database (${allUsers.length}):');
     for (final user in allUsers) {
       print('  - ID: ${user['id']}, Email: ${user['email']}, Hash: ${user['password_hash']}, Plain: ${user['password_plain']}');
     }
@@ -310,25 +310,25 @@ class DatabaseService {
     );
     
     if (userMaps.isEmpty) {
-      print('❌ User not found in database');
+      print('User not found in database');
       return false;
     }
     
     final userData = userMaps.first;
-    print('👤 User found:');
+    print('User found:');
     print('  - ID: ${userData['id']}');
     print('  - Email: ${userData['email']}');
     print('  - Stored password hash: ${userData['password_hash']}');
     print('  - Stored password plain: ${userData['password_plain']}');
     
     final passwordHash = _hashPassword(password);
-    print('🔐 Generated hash for input: $passwordHash');
+    print('Generated hash for input: $passwordHash');
     
     final hashMatch = userData['password_hash'] == passwordHash;
-    print('🔍 Hash match: $hashMatch');
+    print('Hash match: $hashMatch');
     
     final plainMatch = userData['password_plain'] == password;
-    print('🔍 Plain match: $plainMatch');
+    print('Plain match: $plainMatch');
     
     return hashMatch || plainMatch;
   }
@@ -337,7 +337,7 @@ class DatabaseService {
     final db = await instance.database;
     final maps = await db.query('users');
     
-    print('📋 All users in database:');
+    print('All users in database:');
     for (final map in maps) {
       print('  - ID: ${map['id']}, Email: ${map['email']}, Synced: ${map['is_synced']}');
     }
@@ -379,7 +379,7 @@ class DatabaseService {
   Future<void> updateUserAfterSync(int oldId, User newUser) async {
     final db = await instance.database;
     
-    print('🔄 Updating user after sync:');
+    print('Updating user after sync:');
     print('  - Old ID: $oldId');
     print('  - New ID: ${newUser.id}');
     print('  - Email: ${newUser.email}');
@@ -400,21 +400,21 @@ class DatabaseService {
       passwordHash = oldUserData.first['password_hash'] as String?;
       passwordPlain = oldUserData.first['password_plain'] as String?;
       profileImagePath = oldUserData.first['profile_image_path'] as String?;
-      print('  - Preserving password and profile image from old user');
+      print('Preserving password and profile image from old user');
       if (profileImagePath != null) {
-        print('📸 Profile image path to preserve: $profileImagePath');
+        print('Profile image path to preserve: $profileImagePath');
       }
     }
     
     // IMPORTANT : Mettre à jour TOUTES les tâches de l'ancien utilisateur AVANT de le supprimer
-    print('🔄 Updating todos account_id from $oldId to ${newUser.id}');
+    print('Updating todos account_id from $oldId to ${newUser.id}');
     final todosUpdated = await db.update(
       'todos',
       {'account_id': newUser.id},
       where: 'account_id = ?',
       whereArgs: [oldId],
     );
-    print('✅ Updated $todosUpdated todos with new account_id');
+    print('Updated $todosUpdated todos with new account_id');
     
     // Supprimer l'ancien utilisateur
     await db.delete('users', where: 'id = ?', whereArgs: [oldId]);
@@ -430,20 +430,20 @@ class DatabaseService {
       'created_at': DateTime.now().toIso8601String(),
     });
     
-    print('✅ User updated after sync with preserved password, profile image, and updated todos');
+    print('User updated after sync with preserved password, profile image, and updated todos');
     await debugDatabase();
   }
 
   Future<void> deleteUser() async {
     final db = await instance.database;
-    print('🗑️ Clearing user session (keeping user data and todos)');
+    print('Clearing user session (keeping user data and todos)');
     // Ne rien supprimer - juste nettoyer la session
   }
 
   Future<void> deleteAllUsers() async {
     final db = await instance.database;
     await db.delete('users');
-    print('🗑️ All users deleted');
+    print('All users deleted');
   }
 
   String _hashPassword(String password) {
@@ -455,33 +455,33 @@ class DatabaseService {
   Future<void> debugDatabase() async {
     final db = await instance.database;
     
-    print('🔍 === DATABASE DEBUG ===');
+    print('=== DATABASE DEBUG ===');
     
     final usersTableInfo = await db.rawQuery('PRAGMA table_info(users)');
-    print('📋 Users table structure:');
+    print('Users table structure:');
     for (final column in usersTableInfo) {
       print('  - ${column['name']}: ${column['type']}');
     }
     
     final todosTableInfo = await db.rawQuery('PRAGMA table_info(todos)');
-    print('📋 Todos table structure:');
+    print('Todos table structure:');
     for (final column in todosTableInfo) {
       print('  - ${column['name']}: ${column['type']}');
     }
     
     final users = await db.query('users');
-    print('👥 Users in database (${users.length}):');
+    print('Users in database (${users.length}):');
     for (final user in users) {
       print('  - ID: ${user['id']}, Email: ${user['email']}, Hash: ${user['password_hash']}, Plain: ${user['password_plain']}');
     }
     
     final todos = await db.query('todos');
-    print('📝 Todos in database (${todos.length}):');
+    print('Todos in database (${todos.length}):');
     for (final todo in todos) {
       print('  - ID: ${todo['id']}, Account: ${todo['account_id']}, Todo: ${todo['todo']}, Synced: ${todo['synced']}');
     }
     
-    print('🔍 === END DEBUG ===');
+    print('=== END DEBUG ===');
   }
 
   // Todo operations
@@ -491,7 +491,7 @@ class DatabaseService {
     try {
       if (todo.id != null && todo.id! > 0) {
         // Tâche avec ID serveur - utiliser INSERT OR REPLACE avec server_id
-        print('📥 Inserting/updating server todo: ${todo.todo} (ID: ${todo.id})');
+        print('Inserting/updating server todo: ${todo.todo} (ID: ${todo.id})');
         
         await db.execute('''
           INSERT OR REPLACE INTO todos 
@@ -509,7 +509,7 @@ class DatabaseService {
         return todo.id!;
       } else {
         // Tâche locale - insérer normalement
-        print('💾 Inserting local todo: ${todo.todo}');
+        print('Inserting local todo: ${todo.todo}');
         final maps = await db.query(
           'todos',
           where: 'account_id = ? AND date = ? AND todo = ?',
@@ -548,7 +548,7 @@ class DatabaseService {
         orderBy: 'date DESC, id DESC',
       );
 
-      print('📝 Found ${maps.length} todos for account $accountId');
+      print('Found ${maps.length} todos for account $accountId');
       for (final map in maps) {
         print('  - Todo: ${map['todo']}, Account: ${map['account_id']}, Synced: ${map['synced']}');
       }
@@ -629,7 +629,7 @@ class DatabaseService {
   Future<List<Todo>> getUnsyncedTodos(int accountId) async {
     final db = await instance.database;
     
-    print('🔍 Looking for unsynced todos for account: $accountId');
+    print('Looking for unsynced todos for account: $accountId');
     
     final maps = await db.query(
       'todos',
@@ -637,7 +637,7 @@ class DatabaseService {
       whereArgs: [accountId],
     );
 
-    print('📤 Found ${maps.length} unsynced todos for account $accountId');
+    print('Found ${maps.length} unsynced todos for account $accountId');
     for (final map in maps) {
       print('  - Todo: ${map['todo']}, Account: ${map['account_id']}, Local ID: ${map['id']}');
     }
@@ -666,7 +666,7 @@ class DatabaseService {
         where: 'id = ?',
         whereArgs: [localId],
       );
-      print('✅ Marked todo $localId as synced with server ID $serverId');
+      print('Marked todo $localId as synced with server ID $serverId');
     } catch (e) {
       print('Error marking todo as synced: $e');
     }
@@ -674,7 +674,7 @@ class DatabaseService {
 
   // NOUVEAU : Méthode pour nettoyer seulement lors d'un reset complet
   Future<void> clearUserSession() async {
-    print('🧹 Clearing user session (keeping user data and todos)');
+    print('Clearing user session (keeping user data and todos)');
     // Cette méthode ne supprime rien de la base de données
     // Elle sert juste à marquer la fin de session dans les logs
     // Les données utilisateur et todos restent intactes
@@ -685,7 +685,7 @@ class DatabaseService {
     final db = await instance.database;
     try {
       await db.delete('todos');
-      print('🗑️ All todos cleared (complete reset)');
+      print('All todos cleared (complete reset)');
     } catch (e) {
       print('Error clearing todos: $e');
     }
@@ -696,9 +696,9 @@ class DatabaseService {
     try {
       await db.delete('users');
       await db.delete('todos');
-      print('🗑️ Database reset completed');
+      print('Database reset completed');
     } catch (e) {
-      print('❌ Error resetting database: $e');
+      print('Error resetting database: $e');
     }
   }
 

@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -61,23 +61,41 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.check_circle_outline,
-                    size: 80,
-                    color: Colors.blue,
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_outline,
+                      size: 80,
+                      color: Colors.purple,
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 32),
                   Text(
                     _isLogin ? 'Bon retour !' : 'Créer un compte',
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _isLogin 
+                        ? 'Connectez-vous pour accéder à vos tâches'
+                        : 'Créez votre compte pour commencer',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
                     ),
                   ),
                   const SizedBox(height: 40),
                   Card(
                     elevation: 8,
+                    color: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -90,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
                               labelText: 'Email',
-                              prefixIcon: Icon(Icons.email),
+                              prefixIcon: Icon(Icons.email, color: Colors.purple),
                               border: OutlineInputBorder(),
                             ),
                             validator: (value) {
@@ -109,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             obscureText: true,
                             decoration: const InputDecoration(
                               labelText: 'Mot de passe',
-                              prefixIcon: Icon(Icons.lock),
+                              prefixIcon: Icon(Icons.lock, color: Colors.purple),
                               border: OutlineInputBorder(),
                             ),
                             validator: (value) {
@@ -129,15 +147,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   if (authProvider.error != null)
                                     Container(
-                                      padding: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.all(12),
                                       margin: const EdgeInsets.only(bottom: 16),
                                       decoration: BoxDecoration(
-                                        color: Colors.red.shade100,
+                                        color: Colors.red.shade50,
                                         borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.red.shade200),
                                       ),
-                                      child: Text(
-                                        authProvider.error!,
-                                        style: TextStyle(color: Colors.red.shade700),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              authProvider.error!,
+                                              style: TextStyle(color: Colors.red.shade700),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   SizedBox(
@@ -146,11 +173,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: ElevatedButton(
                                       onPressed: authProvider.isLoading ? null : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue,
+                                        backgroundColor: Colors.purple,
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(8),
                                         ),
+                                        elevation: 2,
                                       ),
                                       child: authProvider.isLoading
                                           ? const CircularProgressIndicator(
@@ -158,7 +186,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                             )
                                           : Text(
                                               _isLogin ? 'Se connecter' : 'S\'inscrire',
-                                              style: const TextStyle(fontSize: 16),
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                             ),
                                     ),
                                   ),
@@ -177,7 +208,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               _isLogin
                                   ? "Vous n'avez pas de compte ? S'inscrire"
                                   : "Vous avez déjà un compte ? Se connecter",
-                              style: const TextStyle(color: Colors.blue),
+                              style: const TextStyle(
+                                color: Colors.purple,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],

@@ -94,7 +94,7 @@ class TodoProvider with ChangeNotifier {
       }
       
       // Save locally as unsynced (fallback or offline mode)
-      print('💾 Saving todo locally as unsynced');
+      print('Saving todo locally as unsynced');
       final localTodo = todo.copyWith(synced: false);
       await DatabaseService.instance.insertTodo(localTodo);
       
@@ -103,7 +103,7 @@ class TodoProvider with ChangeNotifier {
       _applyFilter();
       notifyListeners();
       
-      print('✅ Todo saved locally: ${todo.todo}');
+      print('Todo saved locally: ${todo.todo}');
       
     } catch (e) {
       _error = 'Error adding todo: $e';
@@ -214,14 +214,14 @@ class TodoProvider with ChangeNotifier {
     
     if (existingTodos.isEmpty) {
       // Nouvelle tâche du serveur, l'insérer
-      print('📥 Inserting new server todo: ${serverTodo.todo}');
+      print('Inserting new server todo: ${serverTodo.todo}');
       await DatabaseService.instance.insertTodo(serverTodo.copyWith(synced: true));
     } else {
       // Tâche existante, mettre à jour si nécessaire
       final existingTodo = existingTodos.first;
       if (existingTodo['synced'] == 0) {
         // Marquer comme synchronisée
-        print('✅ Marking existing todo as synced: ${serverTodo.todo}');
+        print('Marking existing todo as synced: ${serverTodo.todo}');
         await db.update(
           'todos',
           {
@@ -232,7 +232,7 @@ class TodoProvider with ChangeNotifier {
           whereArgs: [existingTodo['id']],
         );
       } else {
-        print('📋 Todo already synced: ${serverTodo.todo}');
+        print('Todo already synced: ${serverTodo.todo}');
       }
     }
   }

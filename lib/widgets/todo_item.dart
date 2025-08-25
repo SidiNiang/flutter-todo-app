@@ -14,7 +14,6 @@ class TodoItem extends StatelessWidget {
     try {
       return DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
     } catch (e) {
-      // Fallback to simple format if French locale fails
       return DateFormat('dd/MM/yyyy').format(date);
     }
   }
@@ -24,6 +23,7 @@ class TodoItem extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 2,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -36,12 +36,13 @@ class TodoItem extends StatelessWidget {
                 .toggleTodoStatus(todo);
           },
           activeColor: Colors.green,
+          checkColor: Colors.white,
         ),
         title: Text(
           todo.todo,
           style: TextStyle(
             decoration: todo.done ? TextDecoration.lineThrough : null,
-            color: todo.done ? Colors.grey : null,
+            color: todo.done ? Colors.grey : Colors.black87,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -90,7 +91,7 @@ class TodoItem extends StatelessWidget {
               value: 'edit',
               child: Row(
                 children: [
-                  Icon(Icons.edit, size: 20),
+                  Icon(Icons.edit, size: 20, color: Colors.purple),
                   SizedBox(width: 8),
                   Text('Modifier'),
                 ],
@@ -123,12 +124,13 @@ class TodoItem extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Supprimer la tâche'),
         content: const Text('Êtes-vous sûr de vouloir supprimer cette tâche ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () {

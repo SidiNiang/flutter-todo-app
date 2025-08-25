@@ -24,18 +24,17 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      print('🔍 Checking authentication status...');
+      print('Vérification du statut d\'authentification...');
       
-      // CORRIGÉ : Appeler initializeAuth() sans paramètre
       final isAuthenticated = await authProvider.initializeAuth();
       
       if (isAuthenticated && authProvider.user != null) {
-        print('✅ User is authenticated, going to HomeScreen');
+        print('L\'utilisateur est authentifié, redirection vers l\'écran d\'accueil');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       } else {
-        print('❌ User is not authenticated, going to LoginScreen');
+        print('L\'utilisateur n\'est pas authentifié, redirection vers l\'écran de connexion');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
@@ -46,30 +45,46 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue,
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              size: 100,
-              color: Colors.white,
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Application Todo',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.purple, Color(0xFF9C27B0)],
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: 100,
                 color: Colors.white,
               ),
-            ),
-            SizedBox(height: 20),
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ],
+              SizedBox(height: 20),
+              Text(
+                'Application Todo',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Organisez vos tâches facilement',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white70,
+                ),
+              ),
+              SizedBox(height: 40),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ],
+          ),
         ),
       ),
     );

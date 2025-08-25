@@ -19,10 +19,10 @@ class WeatherService {
 
   static Future<WeatherData?> getWeatherData(double latitude, double longitude) async {
     try {
-      print('🌡️ Requesting weather for: $latitude, $longitude');
+      print('Demande météo pour: $latitude, $longitude');
       
       final url = '$baseUrl?lat=$latitude&lon=$longitude&appid=$apiKey&units=metric';
-      print('🌐 URL: $url');
+      print('URL: $url');
       
       final response = await http.get(
         Uri.parse(url),
@@ -32,8 +32,8 @@ class WeatherService {
         },
       ).timeout(const Duration(seconds: 10));
 
-      print('📡 Weather API Response Status: ${response.statusCode}');
-      print('📄 Weather API Response Body: ${response.body}');
+      print('Statut de réponse API météo: ${response.statusCode}');
+      print('Corps de réponse API météo: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -42,24 +42,24 @@ class WeatherService {
           cityName: data['name'],
           country: data['sys']['country'],
         );
-        print('🌡️ Weather data obtained: ${weatherData.cityName}, ${weatherData.temperature}°C');
+        print('Données météo obtenues: ${weatherData.cityName}, ${weatherData.temperature}°C');
         return weatherData;
       } else {
-        print('❌ API Error: ${response.statusCode} - ${response.body}');
+        print('Erreur API: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
-      print('💥 Weather service error: $e');
+      print('Erreur du service météo: $e');
       return null;
     }
   }
 
   static Future<WeatherData?> getWeatherDataByCity({String city = 'Paris'}) async {
     try {
-      print('🏙️ Requesting weather for city: $city');
+      print('Demande météo pour la ville: $city');
       
       final url = '$baseUrl?q=$city&appid=$apiKey&units=metric';
-      print('🌐 URL: $url');
+      print('URL: $url');
       
       final response = await http.get(
         Uri.parse(url),
@@ -69,8 +69,8 @@ class WeatherService {
         },
       ).timeout(const Duration(seconds: 10));
 
-      print('📡 Weather API Response Status: ${response.statusCode}');
-      print('📄 Weather API Response Body: ${response.body}');
+      print('Statut de réponse API météo: ${response.statusCode}');
+      print('Corps de réponse API météo: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -79,24 +79,24 @@ class WeatherService {
           cityName: data['name'],
           country: data['sys']['country'],
         );
-        print('🌡️ Weather data obtained for ${weatherData.cityName}: ${weatherData.temperature}°C');
+        print('Données météo obtenues pour ${weatherData.cityName}: ${weatherData.temperature}°C');
         return weatherData;
       } else {
-        print('❌ API Error: ${response.statusCode} - ${response.body}');
+        print('Erreur API: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
-      print('💥 Weather service error: $e');
+      print('Erreur du service météo: $e');
       return null;
     }
   }
 
   static Future<WeatherData?> testWeatherAPI() async {
     try {
-      print('🧪 Testing weather API with your Postman URL...');
+      print('Test de l\'API météo avec votre URL Postman...');
       
       const url = 'https://api.openweathermap.org/data/2.5/weather?id=2246678&appid=638d81e58870c0d141c62ba76459c338&units=metric';
-      print('🌐 Test URL: $url');
+      print('URL de test: $url');
       
       final response = await http.get(
         Uri.parse(url),
@@ -106,8 +106,8 @@ class WeatherService {
         },
       ).timeout(const Duration(seconds: 10));
 
-      print('📡 Test API Response Status: ${response.statusCode}');
-      print('📄 Test API Response Body: ${response.body}');
+      print('Statut de réponse API test: ${response.statusCode}');
+      print('Corps de réponse API test: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -116,14 +116,14 @@ class WeatherService {
           cityName: data['name'],
           country: data['sys']['country'],
         );
-        print('🌡️ Test weather data obtained: ${weatherData.cityName}, ${weatherData.temperature}°C');
+        print('Données météo de test obtenues: ${weatherData.cityName}, ${weatherData.temperature}°C');
         return weatherData;
       } else {
-        print('❌ Test API Error: ${response.statusCode} - ${response.body}');
+        print('Erreur API test: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
-      print('💥 Test weather service error: $e');
+      print('Erreur du service météo test: $e');
       return null;
     }
   }

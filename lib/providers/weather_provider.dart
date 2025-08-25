@@ -26,61 +26,56 @@ class WeatherProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('🚀 Starting weather data loading...');
+      print('Démarrage du chargement des données météo...');
       
-      // D'abord, tester l'API avec votre URL Postman qui fonctionne
-      print('🧪 Testing API first...');
+      print('Test de l\'API d\'abord...');
       final testWeatherData = await WeatherService.testWeatherAPI();
       if (testWeatherData != null) {
         _weatherData = testWeatherData;
-        _weatherSource = 'Test API (ID: 2246678)';
+        _weatherSource = 'API Test (ID: 2246678)';
         _isLoading = false;
         notifyListeners();
         return;
       }
 
-      // Vérifier si les services de localisation sont activés
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      print('📍 Location service enabled: $serviceEnabled');
+      print('Service de localisation activé: $serviceEnabled');
       
       if (!serviceEnabled) {
-        print('⚠️ Location services are disabled, using fallback city');
+        print('Services de localisation désactivés, utilisation de la ville de secours');
         await _loadWeatherByCity();
         return;
       }
 
-      // Vérifier les permissions
       LocationPermission permission = await Geolocator.checkPermission();
-      print('📍 Current permission status: $permission');
+      print('Statut de permission actuel: $permission');
       
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        print('📍 Permission after request: $permission');
+        print('Permission après demande: $permission');
         
         if (permission == LocationPermission.denied) {
-          print('⚠️ Location permissions denied, using fallback city');
+          print('Permissions de localisation refusées, utilisation de la ville de secours');
           await _loadWeatherByCity();
           return;
         }
       }
       
       if (permission == LocationPermission.deniedForever) {
-        print('⚠️ Location permissions permanently denied, using fallback city');
+        print('Permissions de localisation refusées définitivement, utilisation de la ville de secours');
         await _loadWeatherByCity();
         return;
       }
 
-      // Obtenir la position actuelle avec timeout
-      print('📍 Getting current position...');
+      print('Obtention de la position actuelle...');
       try {
         _position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.medium,
           timeLimit: const Duration(seconds: 15),
         );
         
-        print('✅ Position obtained: ${_position!.latitude}, ${_position!.longitude}');
+        print('Position obtenue: ${_position!.latitude}, ${_position!.longitude}');
 
-        // Obtenir les données météo
         _weatherData = await WeatherService.getWeatherData(
           _position!.latitude,
           _position!.longitude,
@@ -88,21 +83,20 @@ class WeatherProvider with ChangeNotifier {
 
         if (_weatherData != null) {
           _weatherSource = 'GPS (${_position!.latitude.toStringAsFixed(2)}, ${_position!.longitude.toStringAsFixed(2)})';
-          print('✅ Weather data obtained via GPS: ${_weatherData!.cityName}, ${_weatherData!.temperature}°C');
+          print('Données météo obtenues via GPS: ${_weatherData!.cityName}, ${_weatherData!.temperature}°C');
         } else {
-          print('⚠️ Failed to get weather data by GPS, trying fallback city');
+          print('Échec d\'obtention des données météo par GPS, tentative avec ville de secours');
           await _loadWeatherByCity();
         }
       } catch (e) {
-        print('❌ Error getting position: $e');
-        print('⚠️ Using fallback city due to GPS error');
+        print('Erreur lors de l\'obtention de la position: $e');
+        print('Utilisation de la ville de secours à cause de l\'erreur GPS');
         await _loadWeatherByCity();
       }
 
     } catch (e) {
-      print('💥 General error in loadWeatherData: $e');
+      print('Erreur générale dans loadWeatherData: $e');
       _error = 'Erreur lors du chargement de la météo: $e';
-      // Essayer le fallback même en cas d'erreur générale
       await _loadWeatherByCity();
     } finally {
       _isLoading = false;
@@ -112,23 +106,22 @@ class WeatherProvider with ChangeNotifier {
 
   Future<void> _loadWeatherByCity() async {
     try {
-      print('🏙️ Loading weather by city (fallback)...');
+      print('Chargement de la météo par ville (secours)...');
       _weatherData = await WeatherService.getWeatherDataByCity(city: 'Paris');
       
       if (_weatherData != null) {
-        _weatherSource = 'Paris (fallback)';
-        print('✅ Fallback weather data obtained: ${_weatherData!.cityName}, ${_weatherData!.temperature}°C');
-        _error = null; // Clear any previous error
+        _weatherSource = 'Paris (secours)';
+        print('Données météo de secours obtenues: ${_weatherData!.cityName}, ${_weatherData!.temperature}°C');
+        _error = null;
       } else {
         _error = 'Impossible de récupérer la température';
       }
     } catch (e) {
-      print('💥 Error in fallback weather: $e');
+      print('Erreur dans la météo de secours: $e');
       _error = 'Erreur lors du chargement de la météo: $e';
     }
   }
 
-  // Méthode pour forcer le rechargement
   Future<void> refreshWeather() async {
     await loadWeatherData();
   }
