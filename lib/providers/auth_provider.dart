@@ -20,7 +20,6 @@ class AuthProvider with ChangeNotifier {
   bool get isSyncing => _isSyncing;
 
   AuthProvider() {
-    _loadUser();
     _startConnectivityMonitoring();
   }
 
@@ -34,8 +33,38 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> _loadUser() async {
-    _user = await DatabaseService.instance.getUser();
-    notifyListeners();
+    try {
+      print('👤 Loading user from database...');
+      
+      final prefs = await SharedPreferences.getInstance();
+      final loggedInUserId = prefs.getInt('logged_in_user_id');
+      
+      if (loggedInUserId != null) {
+        print('🔍 Looking for user with ID: $loggedInUserId');
+        _user = await DatabaseService.instance.getUserById(loggedInUserId);
+        
+        if (_user != null) {
+          print('✅ User loaded: ${_user!.email} (ID: ${_user!.id})');
+          _isOfflineMode = _user!.id < 0;
+        } else {
+          print('⚠️ User with ID $loggedInUserId not found in database');
+          await prefs.remove('logged_in_user_id');
+          await prefs.setBool('is_logged_in', false);
+          _isOfflineMode = false;
+        }
+      } else {
+        print('⚠️ No logged in user ID found in SharedPreferences');
+        _user = null;
+        _isOfflineMode = false;
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      print('❌ Error loading user: $e');
+      _user = null;
+      _isOfflineMode = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> _checkConnectivity() async {
@@ -72,7 +101,7 @@ class AuthProvider with ChangeNotifier {
           _user = user;
           _isOfflineMode = false;
           await DatabaseService.instance.saveUser(user, password: password);
-          await _saveLoginState(true);
+          await _saveLoginState(true, user.id);
           _isLoading = false;
           notifyListeners();
           return true;
@@ -113,7 +142,7 @@ class AuthProvider with ChangeNotifier {
       
       _user = user;
       _isOfflineMode = true;
-      await _saveLoginState(true);
+      await _saveLoginState(true, user.id);
       
       _error = null;
       _isLoading = false;
@@ -146,7 +175,7 @@ class AuthProvider with ChangeNotifier {
           _user = user;
           _isOfflineMode = false;
           await DatabaseService.instance.saveUser(user, password: password);
-          await _saveLoginState(true);
+          await _saveLoginState(true, user.id);
           _isLoading = false;
           notifyListeners();
           
@@ -176,7 +205,7 @@ class AuthProvider with ChangeNotifier {
         if (user != null) {
           _user = user;
           _isOfflineMode = user.id < 0;
-          await _saveLoginState(true);
+          await _saveLoginState(true, user.id);
           
           _error = null;
           _isLoading = false;
@@ -212,6 +241,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // MODIFIÉ : Synchronisation simplifiée sans flag de migration
   Future<void> syncOfflineData() async {
     if (_isSyncing) return;
     
@@ -227,20 +257,28 @@ class AuthProvider with ChangeNotifier {
 
       print('🔄 Starting complete offline data sync...');
 
-      // IMPORTANT : Synchroniser les utilisateurs AVANT les tâches
+      // Sauvegarder l'ancien ID utilisateur pour référence
+      final oldUserId = _user?.id;
+      print('📋 Current user ID before sync: $oldUserId');
+
+      // Synchroniser les utilisateurs
       await _syncOfflineUsers();
 
-      // Recharger l'utilisateur après sync pour avoir le bon ID
+      // Recharger l'utilisateur après sync
       if (_user != null) {
         final updatedUser = await DatabaseService.instance.getUserByEmail(_user!.email);
-        if (updatedUser != null) {
+        if (updatedUser != null && updatedUser.id != oldUserId) {
+          print('🔄 User ID changed from $oldUserId to ${updatedUser.id}');
           _user = updatedUser;
           _isOfflineMode = false;
-          notifyListeners();
+          await _saveLoginState(true, _user!.id);
+          
+          // IMPORTANT : Ne pas appeler notifyListeners() ici pour éviter les rebuilds multiples
+          // Le ProfileProvider détectera automatiquement le changement d'ID
         }
       }
 
-      // Maintenant synchroniser les tâches avec le bon account_id
+      // Synchroniser les tâches
       if (_user != null) {
         await _syncOfflineTodos();
       }
@@ -251,7 +289,7 @@ class AuthProvider with ChangeNotifier {
       print('❌ Sync error: $e');
     } finally {
       _isSyncing = false;
-      notifyListeners();
+      notifyListeners(); // Un seul notifyListeners() à la fin
     }
   }
 
@@ -270,9 +308,9 @@ class AuthProvider with ChangeNotifier {
             if (serverUser != null) {
               print('✅ User synced to server: ${offlineUser.email} -> ID ${serverUser.id}');
               
-              // IMPORTANT : updateUserAfterSync met à jour les tâches aussi
               await DatabaseService.instance.updateUserAfterSync(offlineUser.id, serverUser);
               
+              // Mettre à jour l'utilisateur actuel si c'est lui qui a été synchronisé
               if (_user?.id == offlineUser.id) {
                 _user = serverUser;
                 _isOfflineMode = false;
@@ -289,7 +327,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // CORRIGÉ : Synchronisation des tâches avec le bon account_id
   Future<void> _syncOfflineTodos() async {
     try {
       print('🔄 Starting todos sync for user ID: ${_user!.id}');
@@ -300,7 +337,6 @@ class AuthProvider with ChangeNotifier {
       for (final todo in unsyncedTodos) {
         print('🔄 Syncing todo: ${todo.todo} (Account: ${todo.accountId})');
         
-        // Créer une copie de la tâche avec le bon account_id pour l'API
         final todoForApi = todo.copyWith(accountId: _user!.id);
         
         final success = await ApiService.createTodo(todoForApi);
@@ -325,22 +361,30 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     final currentUserId = _user?.id;
     print('🚪 Logging out user $currentUserId');
-    
+  
     _user = null;
     _isOfflineMode = false;
     _isSyncing = false;
-    await DatabaseService.instance.deleteUser();
-    // CORRIGÉ : Ne PAS supprimer les tâches lors de la déconnexion
-    // await DatabaseService.instance.clearTodos(); // SUPPRIMÉ
-    await _saveLoginState(false);
-    
-    print('✅ User logged out, todos preserved locally');
+    _error = null;
+  
+    await DatabaseService.instance.clearUserSession();
+    await _saveLoginState(false, null);
+  
+    print('✅ User logged out, session cleared');
     notifyListeners();
   }
 
-  Future<void> _saveLoginState(bool isLoggedIn) async {
+  Future<void> _saveLoginState(bool isLoggedIn, int? userId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_logged_in', isLoggedIn);
+    
+    if (isLoggedIn && userId != null) {
+      await prefs.setInt('logged_in_user_id', userId);
+      print('💾 Saved login state: logged_in=true, user_id=$userId');
+    } else {
+      await prefs.remove('logged_in_user_id');
+      print('💾 Saved login state: logged_in=false, user_id=null');
+    }
   }
 
   Future<bool> isLoggedIn() async {
@@ -357,5 +401,41 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  Future<bool> initializeAuth() async {
+    try {
+      print('🔐 Initializing authentication...');
+      
+      final wasLoggedIn = await isLoggedIn();
+      print('📋 Was logged in: $wasLoggedIn');
+      
+      if (wasLoggedIn) {
+        await _loadUser();
+        
+        if (_user != null) {
+          print('✅ User loaded from database: ${_user!.email} (ID: ${_user!.id})');
+          _isOfflineMode = _user!.id < 0;
+          print('📶 Mode: ${_isOfflineMode ? "OFFLINE" : "ONLINE"}');
+          
+          if (!_isOfflineMode) {
+            _autoSync();
+          }
+          
+          notifyListeners();
+          return true;
+        } else {
+          print('⚠️ No user found in database despite login state');
+          await _saveLoginState(false, null);
+          return false;
+        }
+      } else {
+        print('📴 User was not logged in');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error initializing auth: $e');
+      return false;
+    }
   }
 }

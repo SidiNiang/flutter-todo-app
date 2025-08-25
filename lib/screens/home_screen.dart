@@ -35,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  // SIMPLIFIÉ : Chargement des données sans logique de migration complexe
   Future<void> _loadData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final todoProvider = Provider.of<TodoProvider>(context, listen: false);
@@ -42,9 +43,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
 
     if (authProvider.user != null) {
+      print('🔄 Loading data for user: ${authProvider.user!.id}');
+      
+      // Le ProfileProvider détecte automatiquement les changements d'ID et fait la migration
       await profileProvider.loadProfileImageForUser(authProvider.user!.id);
+      
       await todoProvider.loadTodos(authProvider.user!.id);
       await weatherProvider.loadWeatherData();
+      
+      print('✅ Data loading completed');
     }
   }
 
@@ -62,13 +69,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // NOUVEAU : Synchronisation manuelle
   Future<void> _manualSync() async {
+    print('🔄 Manual sync requested');
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Déboguer l'état avant sync
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    profileProvider.debugProfileState();
+    
     await authProvider.manualSync();
     
     // Recharger les données après synchronisation
     await _loadData();
+    
+    // Déboguer l'état après sync
+    profileProvider.debugProfileState();
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -82,6 +97,102 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context: context,
       builder: (context) => const AddTodoDialog(),
     );
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Photo de profil'),
+        content: const Text('Choisissez une source pour votre photo de profil'),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _pickImageFromGallery();
+            },
+            icon: const Icon(Icons.photo_library),
+            label: const Text('Galerie'),
+          ),
+          TextButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _takePhoto();
+            },
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Caméra'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    
+    try {
+      await profileProvider.pickProfileImage();
+      
+      if (mounted && profileProvider.lastError == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo de profil mise à jour')),
+        );
+      } else if (mounted && profileProvider.lastError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(profileProvider.lastError!),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        profileProvider.clearError();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    
+    try {
+      await profileProvider.takeProfilePhoto();
+      
+      if (mounted && profileProvider.lastError == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo de profil mise à jour')),
+        );
+      } else if (mounted && profileProvider.lastError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(profileProvider.lastError!),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        profileProvider.clearError();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -124,7 +235,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         Row(
                           children: [
-                            // NOUVEAU : Bouton de synchronisation
                             Consumer<AuthProvider>(
                               builder: (context, authProvider, child) {
                                 return Container(
@@ -256,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => profileProvider.pickProfileImage(),
+                onTap: _showImageSourceDialog,
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -281,22 +391,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ? const Icon(Icons.person, size: 32, color: Colors.blue)
                             : null,
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
+                      if (profileProvider.isLoading)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 16,
+                        )
+                      else
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -333,7 +463,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                        // NOUVEAU : Indicateur de mode offline/online
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(

@@ -221,14 +221,57 @@ class DatabaseService {
     print('✅ User saved: ${user.email} (ID: ${user.id})');
   }
 
+  // ANCIEN : Méthode dépréciée - ne plus utiliser
   Future<User?> getUser() async {
-    final db = await instance.database;
-    final maps = await db.query('users', limit: 1);
-    
-    if (maps.isNotEmpty) {
-      return User.fromJson(maps.first);
+    try {
+      final db = await instance.database;
+      print('⚠️ WARNING: getUser() is deprecated, use getUserById() instead');
+      
+      final maps = await db.query('users', limit: 1);
+      print('📊 Found ${maps.length} users in database');
+      
+      if (maps.isNotEmpty) {
+        final userData = maps.first;
+        print('👤 User data: ID=${userData['id']}, Email=${userData['email']}');
+        
+        final user = User.fromJson(userData);
+        print('✅ User object created successfully');
+        return user;
+      } else {
+        print('⚠️ No users found in database');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Error getting user: $e');
+      return null;
     }
-    return null;
+  }
+
+  // NOUVEAU : Récupérer un utilisateur par son ID
+  Future<User?> getUserById(int userId) async {
+    try {
+      final db = await instance.database;
+      print('🔍 Looking for user with ID: $userId');
+      
+      final maps = await db.query(
+        'users',
+        where: 'id = ?',
+        whereArgs: [userId],
+        limit: 1,
+      );
+      
+      if (maps.isNotEmpty) {
+        final userData = maps.first;
+        print('✅ User found: ID=${userData['id']}, Email=${userData['email']}');
+        return User.fromJson(userData);
+      } else {
+        print('❌ User with ID $userId not found');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Error getting user by ID: $e');
+      return null;
+    }
   }
 
   Future<User?> getUserByEmail(String email) async {
@@ -341,7 +384,7 @@ class DatabaseService {
     print('  - New ID: ${newUser.id}');
     print('  - Email: ${newUser.email}');
     
-    // Récupérer le mot de passe de l'ancien utilisateur
+    // Récupérer le mot de passe ET le profile_image_path de l'ancien utilisateur
     final oldUserData = await db.query(
       'users',
       where: 'id = ?',
@@ -351,11 +394,16 @@ class DatabaseService {
     
     String? passwordHash;
     String? passwordPlain;
+    String? profileImagePath;
     
     if (oldUserData.isNotEmpty) {
       passwordHash = oldUserData.first['password_hash'] as String?;
       passwordPlain = oldUserData.first['password_plain'] as String?;
-      print('  - Preserving password from old user');
+      profileImagePath = oldUserData.first['profile_image_path'] as String?;
+      print('  - Preserving password and profile image from old user');
+      if (profileImagePath != null) {
+        print('📸 Profile image path to preserve: $profileImagePath');
+      }
     }
     
     // IMPORTANT : Mettre à jour TOUTES les tâches de l'ancien utilisateur AVANT de le supprimer
@@ -371,18 +419,18 @@ class DatabaseService {
     // Supprimer l'ancien utilisateur
     await db.delete('users', where: 'id = ?', whereArgs: [oldId]);
     
-    // Insérer le nouvel utilisateur avec le mot de passe préservé
+    // Insérer le nouvel utilisateur avec le mot de passe ET profile_image_path préservés
     await db.insert('users', {
       'id': newUser.id,
       'email': newUser.email,
-      'profile_image_path': newUser.profileImagePath,
+      'profile_image_path': profileImagePath ?? newUser.profileImagePath, // CORRIGÉ : Préserver l'ancienne photo
       'password_hash': passwordHash,
       'password_plain': passwordPlain,
       'is_synced': 1,
       'created_at': DateTime.now().toIso8601String(),
     });
     
-    print('✅ User updated after sync with preserved password and updated todos');
+    print('✅ User updated after sync with preserved password, profile image, and updated todos');
     await debugDatabase();
   }
 
@@ -626,9 +674,10 @@ class DatabaseService {
 
   // NOUVEAU : Méthode pour nettoyer seulement lors d'un reset complet
   Future<void> clearUserSession() async {
-    final db = await instance.database;
-    // Ne supprimer que les données de session, pas les données utilisateur
-    print('🧹 Session cleared, user data preserved');
+    print('🧹 Clearing user session (keeping user data and todos)');
+    // Cette méthode ne supprime rien de la base de données
+    // Elle sert juste à marquer la fin de session dans les logs
+    // Les données utilisateur et todos restent intactes
   }
 
   // MODIFIÉ : clearTodos ne doit être utilisé que pour un reset complet

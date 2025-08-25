@@ -23,13 +23,19 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final isLoggedIn = await authProvider.isLoggedIn();
       
-      if (isLoggedIn && authProvider.user != null) {
+      print('🔍 Checking authentication status...');
+      
+      // CORRIGÉ : Appeler initializeAuth() sans paramètre
+      final isAuthenticated = await authProvider.initializeAuth();
+      
+      if (isAuthenticated && authProvider.user != null) {
+        print('✅ User is authenticated, going to HomeScreen');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       } else {
+        print('❌ User is not authenticated, going to LoginScreen');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
@@ -39,9 +45,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.blue,
-      body: Center(
+      body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
