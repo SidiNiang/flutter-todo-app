@@ -24,7 +24,7 @@ Installation de l’API
 
 - Placer le dossier todo dans C:/xampp/htdocs/
 - Démarrer Apache
-- Accéder à http://localhost/todo/ (doit afficher Web api)
+- Accéder à http://localhost/todo/
 
 Installation mobile
 
